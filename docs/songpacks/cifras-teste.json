@@ -1,0 +1,212 @@
+{
+ "format": "fm1pt-songpack",
+ "version": 1,
+ "id": "cifras-teste",
+ "name": {
+  "pt": "Módulo de teste · Cifras do Wellington",
+  "en": "Test module · Wellington's chord sheets",
+  "es": "Módulo de prueba · Cifrados de Wellington"
+ },
+ "sub": {
+  "pt": "Músicas inteiras por seção: escolha qualquer bloco",
+  "en": "Whole songs by section: pick any block",
+  "es": "Canciones completas por sección: elige cualquier bloque"
+ },
+ "season": null,
+ "author": "FM1 Pocket Tutor",
+ "published": "2026-11-18",
+ "note": "Só os acordes de cada seção (sem letra). Gerado de ChordPro pelo leitor do app.",
+ "songs": [
+  {
+   "title": "Ten Years Gone",
+   "artist": "Led Zeppelin",
+   "key": "A",
+   "sections": [
+    [
+     "Parte 1",
+     "A Asus4 D/A E/A A"
+    ],
+    [
+     "Parte 2",
+     "A D/A E/A A F#m D E"
+    ],
+    [
+     "Refrão / Clímax",
+     "F#m7 D7M E A E/G#"
+    ],
+    [
+     "Parte 3",
+     "C#m B A E D E"
+    ],
+    [
+     "Fim",
+     "A D/A E/A A7M"
+    ]
+   ]
+  },
+  {
+   "title": "Thank You",
+   "artist": "Led Zeppelin",
+   "key": "D",
+   "sections": [
+    [
+     "Parte 1",
+     "D Dsus4 Cadd9 G/B D"
+    ],
+    [
+     "Parte 2",
+     "D Cadd9 G/B D"
+    ],
+    [
+     "Refrão / Clímax",
+     "G D/F# Em7 A G A D"
+    ],
+    [
+     "Parte 3",
+     "Bm A G F#m Em A"
+    ],
+    [
+     "Fim",
+     "D Cadd9 G/B D"
+    ]
+   ]
+  },
+  {
+   "title": "Ramble On",
+   "artist": "Led Zeppelin",
+   "key": "E",
+   "sections": [
+    [
+     "Parte 1",
+     "E A/E E A/E"
+    ],
+    [
+     "Parte 2",
+     "E A E A C#m B A E"
+    ],
+    [
+     "Refrão / Clímax",
+     "E D A E"
+    ],
+    [
+     "Parte 3",
+     "A E B C#m A B"
+    ],
+    [
+     "Fim",
+     "E D A E E"
+    ]
+   ]
+  },
+  {
+   "title": "Over the Hills and Far Away",
+   "artist": "Led Zeppelin",
+   "key": "G",
+   "sections": [
+    [
+     "Parte 1",
+     "G D/F# G D/F#"
+    ],
+    [
+     "Parte 2",
+     "G D/F# G D/F# C D G D/F#"
+    ],
+    [
+     "Refrão / Clímax",
+     "D5 A5 E5 G5 A5"
+    ],
+    [
+     "Parte 3",
+     "C5 G5 D5 A5"
+    ],
+    [
+     "Fim",
+     "G Cadd9 G Cadd9 G"
+    ]
+   ]
+  },
+  {
+   "title": "Stairway to Heaven",
+   "artist": "Led Zeppelin",
+   "key": "Am",
+   "sections": [
+    [
+     "Parte 1",
+     "Am E+/G# C/G D/F# Fmaj7 G/B Am Am E+/G# C/G D/F# Fmaj7 G/B Am Am E+/G# C/G D/F# Fmaj7 G/B Am C D Fmaj7 G/B Am"
+    ],
+    [
+     "Parte 2",
+     "C D Fmaj7 Am C D Fmaj7 Am E+/G# C/G D/F# Fmaj7 G/B Am"
+    ],
+    [
+     "Refrão / Clímax",
+     "Am7 Dsus2 D Am7 Dsus2 D Am7 Dsus2 D Am7 Dsus2 D Am7 Dsus2 D Am7 Dsus2 D C G/B Am C G/B Fmaj7 Am C G/B Am C G/B Fmaj7 Am"
+    ],
+    [
+     "Parte 3 - Ponte",
+     "Dsus4 D Dsus2 D Cadd9 C G/B Dsus4 D Cadd9 G/B Dsus4 D Cadd9 G/B"
+    ],
+    [
+     "Parte 3 - Solo",
+     "Am G F G Am G F G"
+    ],
+    [
+     "Fim",
+     "Am G F G Am G F G Am G F G Am G F G Am G F G Am G F G Am G F G Am G F G Am G F G Fmaj7 G/B Am Fmaj7 G/B Am"
+    ]
+   ]
+  },
+  {
+   "title": "Hey Jude",
+   "artist": "The Beatles",
+   "key": "F",
+   "sections": [
+    [
+     "Parte 1",
+     "F C C7 F Bb F C7 F F C C7 F Bb F C7 F F7"
+    ],
+    [
+     "Parte 2",
+     "Bb Bb/A Gm Gm7/F C7/E C7 F F7 Bb Bb/A Gm Gm7/F C7/E C7 F"
+    ],
+    [
+     "Refrão / Clímax",
+     "F C C7 F Bb F C7 F F7"
+    ]
+   ]
+  },
+  {
+   "title": "Águas de Março",
+   "artist": "Tom Jobim",
+   "key": "Bb",
+   "sections": [
+    [
+     "Parte 1",
+     "Bb7M Bb7M/Ab Gm6 Ebm6/Gb Bb7M/F C7/E Ebm6 Bb7M Bb7M Bb7M/Ab Gm6 Ebm6/Gb Bb7M/F C7/E Ebm6 Bb7M"
+    ]
+   ]
+  },
+  {
+   "title": "Construção",
+   "artist": "Chico Buarque",
+   "key": "Em",
+   "sections": [
+    [
+     "Parte 1",
+     "Em6 F#m7(b5) B7 Em6 Am6 B7"
+    ]
+   ]
+  },
+  {
+   "title": "Babe I'm Gonna Leave You",
+   "artist": "Led Zeppelin",
+   "key": "Am",
+   "sections": [
+    [
+     "Parte 1",
+     "Am Am7/G D9/F# Fmaj7 E7 Am Am7/G D9/F# Fmaj7 E7 Am Am7/G D9/F# Fmaj7 E7 Am Am7/G D9/F#"
+    ]
+   ]
+  }
+ ]
+}

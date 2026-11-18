@@ -1,0 +1,8 @@
+{
+  "what": "A study firmware: the keys light up to show where to play. A lessons page in Chrome teaches notes, scales, chords and real songs section by section, and imports your own chord sheets (ChordPro). Plays through FM6, six-operator FM with SAVE for your own presets.",
+  "author": "Wellington Saam",
+  "kinds": ["other"],
+  "image": "docs/media/card.png",
+  "color": "#FFD60A",
+  "sounds": "licensed: FM6 voices from Melodee (Kerem Kilic) and Felucca (Leo Kuroshita), GPL-3.0"
+}

@@ -1,0 +1,495 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+"""Build fm1-dock (on Dinghy, on Felucca / SLOOP's platform): the host, the modules, the update
+loader and an installable .fwsc package.
+
+  tools/build.py [--release X.Y[-suffix]] [--modules cs1,scintilla,obervave] [--no-package]
+      the version (APP_VER: the boot log, OPTIONS > ABOUT) is X.Y for a release, with the source as APP_BUILD;
+      any other build's is its source: git's short hash, + with changes not committed (2dcbfbf+)
+  tools/build.py --board smk37 [--model pro|elite|mke] [--release X.Y] ...
+      the M-Vave SMK-37 (Pro, Elite, MKE-P37: one keyboard, three model names): fm1-dock for its panel and flash
+      (-DBOARD_SMK37=1, firmware/hal/fm1_flash_map.h), identity "SMK-37 Pro_921" (the model's name), the package
+      build/fm1-pocket-tutor-smk37.fwsc (-elite, -mke; fm1-dock-X.Y-smk37.fwsc for a release), BLE-MIDI as on the FM-1
+      (HX at flash 0x65000). No boot slot, no solo app on it yet. The FM-1 build gets no new flag: it stays byte
+      for byte as it was
+  tools/build.py --modules PATH/TO/MODULE --name NAME --app-name "NAME" --identity FM-1_9NN [--pack FILE]
+      a solo app: fm1-dock with one module of its own (a directory anywhere: HB_MOUNT for Docker),
+      its own name for the outputs and the crash / rescue screens, its own package identity, and
+      FILE (the module's data: FM-1 SID's tune pack) right after the modules, where the module finds it
+
+Outputs in build/: fm1-dock.bin (the app: the host, the slot table, the modules), fm1-dock_xip.bin
+(the same as fm1-emu / fm1-live --bin take it), modules/*.dock, loader/ota.bin (update loader),
+fm1-dock.fwsc (package; --no-package skips it, and the SDK). See README.md for the toolchain and
+the SDK.
+
+The JieLi toolchain is Linux x86-64 only. JIELI_TOOLCHAIN points at it; on
+macOS (or with JIELI_DOCKER=1) each tool runs in a linux/amd64 container.
+"""
+import argparse
+import hashlib
+import os
+import platform
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import zlib
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+SRC = Path(__file__).resolve().parents[1]
+FW = SRC / "firmware"
+OUT = SRC / "build"
+GEN = OUT / "gen"
+LDR = OUT / "loader"
+sys.path.insert(0, str(SRC / "tools"))
+import fm1pkg_make  # noqa: E402
+import lz4blk  # noqa: E402
+
+APP_XIP = 0x02000120                # app.bin offset 0 in the XIP map; the SPL jumps here
+APP_SLOT = fm1pkg_make.APP_SLOT
+LOADER_LOAD = 0x01C0A800
+LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
+DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")
+CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-function"]
+LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
+
+# SDK files of AC79NN_SDK_V1.2.1_2023-12-13 (the tested version)
+SDK_SHA256 = {
+    "uboot.boot": "4e3b4c220dc96641cb5a723f41e68ce41d5261ae9434bb33fbd7f2c59976ded4",
+    "cfg_tool.bin": "276579954f076886a6a7694f65dc71c034a63a2c204b76749065c0ac7b010d1b",
+    "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
+}
+
+BOARD = "fm1"                       # fm1 (default) or smk37 (--board, or $BOARD)
+MODELS = {"pro": "SMK-37 Pro", "elite": "SMK-37 Elite", "mke": "MKE-P37"}   # smk37: the model's name (--model)
+BOARD_DEFS = []                     # the SMK's -D flags (the FM-1 build gets none: byte-identical)
+PRODUCT = "FM-1_902"                # FM1 Pocket Tutor's own (2026-11-18: no Hub firmware claims 902; fm1-dock is 921). Was fm1-dock's: (free on the Firmware Hub, 2026-10-26: 95N, as
+                                    # it was, is other firmwares'); FM-1_9NN as OUR_LOADER in the installer wants
+VERSION = None                      # APP_VER for release builds (X.Y); else the source's (git_build)
+
+
+def git_build():
+    """the source the build is made from: git's short hash of HEAD, + when tracked files differ from it (as git
+    describe --dirty); "unknown" with no git or no checkout (a release's APP_BUILD, every other build's APP_VER)"""
+    try:
+        run = lambda *a: subprocess.run(["git", *a], cwd=SRC, capture_output=True, text=True, check=True).stdout.strip()
+        return run("rev-parse", "--short=7", "HEAD") + ("+" if run("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=all") else "")
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def toolchain():
+    tc = os.environ.get("JIELI_TOOLCHAIN")
+    if not tc or not (Path(tc) / "pi32v2" / "bin" / "clang").exists():
+        raise SystemExit("JIELI_TOOLCHAIN must point at the JieLi Linux toolchain "
+                         "(the directory with pi32v2/ and common/; see tools/get_toolchain.sh)")
+    return Path(tc).resolve()
+
+
+def use_docker():
+    native = platform.system() == "Linux" and platform.machine() in ("x86_64", "AMD64")
+    return os.environ.get("JIELI_DOCKER", "0" if native else "1") == "1"
+
+
+def tc(tool, *args):
+    """run a toolchain binary (pi32v2/bin/..., common/bin/...) with cwd SRC; paths relative to SRC, or
+    absolute outside it (a module in another repository: its directories in HB_MOUNT, os.pathsep
+    between, are mounted at the same path in the container)"""
+    def arg(a):
+        if not isinstance(a, Path):
+            return a
+        p = Path(a).resolve()
+        return str(p.relative_to(SRC)) if p.is_relative_to(SRC) else str(p)
+    rel = [arg(a) for a in args]
+    if tool == "cc":                # the toolchain's cc wrapper needs python3; call clang directly
+        tool, rel = "pi32v2/bin/clang", ["-target", "pi32v2", *rel]
+    elif tool == "cxx":
+        tool, rel = "pi32v2/bin/clang++", ["-target", "pi32v2", *rel]
+    if use_docker():
+        extra = [x for d in os.environ.get("HB_MOUNT", "").split(os.pathsep) if d
+                 for x in ("-v", f"{Path(d).resolve()}:{Path(d).resolve()}")]
+        cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "-v", f"{SRC}:/work", *extra,
+               "-v", f"{toolchain()}:/opt/jieli:ro", "-w", "/work", DOCKER_IMAGE, f"/opt/jieli/{tool}", *rel]
+    else:
+        cmd = [str(toolchain() / tool), *rel]
+    r = subprocess.run(cmd, cwd=SRC, capture_output=True, text=True)
+    if r.returncode:
+        sys.stderr.write(r.stdout + r.stderr)
+        raise SystemExit(f"build: {tool} failed")
+    if r.stderr.strip():
+        sys.stderr.write(r.stderr)
+    return r.stdout
+
+
+def tc_all(*cmds):
+    with ThreadPoolExecutor(len(cmds)) as ex:
+        return list(ex.map(lambda c: tc(*c), cmds))
+
+
+# ---- update loader
+
+def crc16(d, c=0):
+    for b in d:
+        c ^= b << 8
+        for _ in range(8):
+            c = ((c << 1) ^ 0x1021) if c & 0x8000 else c << 1
+        c &= 0xFFFF
+    return c
+
+
+def ldr_head(dcrc, a, b, attr, name):
+    body = struct.pack("<HIIBBH16s", dcrc, a, b, attr, 0, 0, name)
+    return struct.pack("<H", crc16(body)) + body
+
+
+def ldr_wrap(image):
+    """ota.bin = outer JLFS head (32 B) + inner head (32 B, load address) +
+    blocks [clen u32][dlen u32][LZ4 block], dlen 4096 except the last"""
+    blocks = bytearray()
+    for i in range(0, len(image), 4096):
+        raw = image[i:i + 4096]
+        c = lz4blk.compress(raw)
+        if len(c) > 4096 or lz4blk.decompress(c) != raw:
+            raise SystemExit(f"loader: block {i // 4096} does not compress below 4096 B")
+        blocks += struct.pack("<II", len(c), len(raw)) + c
+    inner = ldr_head(crc16(image), len(image), LOADER_LOAD, 0, LOADER_NAME)
+    body = inner + bytes(blocks)
+    return ldr_head(crc16(body), 0x20, len(body), 0x41, LOADER_NAME) + body
+
+
+def build_loader():
+    LDR.mkdir(parents=True, exist_ok=True)
+    src = FW / "loader"
+    flags = [*CFLAGS, *BOARD_DEFS, "-Ifirmware/hal", "-Ifirmware/src"]
+    tc_all(("cc", "-c", src / "crt0_ldr.S", "-o", LDR / "crt0_ldr.o"),
+           ("cc", *flags, "-c", src / "loader.c", "-o", LDR / "loader.o"))
+    elf = LDR / "loader.elf"
+    tc("pi32v2/bin/ld", "--gc-sections", "-e", "_start", "-T", src / "loader.ld",
+       LDR / "crt0_ldr.o", LDR / "loader.o", "-o", elf)
+    _, dis, hdr, syms = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, LDR / "loader.bin"),
+                               ("common/bin/objdump", "-d", elf),
+                               ("common/bin/objdump", "-h", elf),
+                               ("common/bin/objdump", "-t", elf))
+    (LDR / "loader.dis").write_text(dis)
+    for ln in hdr.splitlines():     # the loader rewrites the flash: nothing may run from XIP
+        p = ln.split()
+        if len(p) > 4 and p[1].startswith(".") and int(p[3], 16) >= 0x02000000 and int(p[2], 16):
+            raise SystemExit(f"loader: section {p[1]} at {p[3]} is outside RAM")
+    image = (LDR / "loader.bin").read_bytes()
+    if not image or len(image) > 0x14000:
+        raise SystemExit("loader: image empty or too big")
+    ota = ldr_wrap(image)
+    (LDR / "ota.bin").write_bytes(ota)
+    bss = [int(ln.split()[0], 16) for ln in syms.splitlines() if ln.rstrip().endswith("_bss_end")]
+    print(f"loader: image {len(image)} B at {LOADER_LOAD:#x}" + (f", bss end {bss[0]:#x}" if bss else ""))
+    print(f"loader: ota.bin {len(ota)} B")
+    return ota
+
+
+# ---- app
+
+APP = "fm1-pocket-tutor"                    # the outputs' name (--name) (build/fm1-pocket-tutor.bin, .fwsc, .syms, ...)
+HOST = "dock"
+PACKAGE = []                        # the FM-1's package: no modules since the map of 2026-11-14 (the phone sends them)                       # the host's source: firmware/src/dock.c
+SLOT_TABLE = 0x0202C000             # firmware/src/dock.c HB_TABLE_AT (flash 0x30000)
+SLOT_FIRST = SLOT_TABLE + 0x1000
+HX_XIP = 0x0202D000                 # firmware/src/ble/hx.h HX_AT (flash 0x31000): BLE-MIDI, a unit of its own (SMK-37: main)
+HX_SIZE = 0xA000
+
+
+def build_app():
+    flags = [*CFLAGS, *BOARD_DEFS, "-Ifirmware/hal", "-Ifirmware/src", "-Ifirmware/gen", "-Ifirmware/dock",
+             f'-DFELUCCA_ID="{PRODUCT}"', f'-DAPP_VER="{VERSION or git_build()}"',
+             *([f'-DAPP_BUILD="{git_build()}"'] if VERSION else []), *(["-DHB_BOOT_SLOT=1"] if BOOT_SLOT else []),
+             *([f'-DAPP_NAME="{APP_NAME}"'] if APP_NAME else []), *(["-DHB_SOLO=1"] if SOLO else [])]
+    cmds = [("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
+            ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
+            ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
+            ("cc", "-c", FW / "hal" / "fm1_cpu1.S", "-o", OUT / "fm1_cpu1.o"),
+            ("cc", *flags, "-c", FW / "src" / f"{HOST}.c", "-o", OUT / f"{HOST}.o"),
+            ("cc", *flags, "-Ifirmware/src/ble", "-c", FW / "src" / "ble" / "hx.c", "-o", OUT / "hx.o")]
+    # (no sine in the host since 2026-11-15: NO MODULE, dock.c, is the silent reserve; modules/sine is a module)
+    tc_all(*cmds)
+    elf = OUT / f"{APP}.elf"
+    ld = FW / "app.ld"
+    if HX_XIP != 0x0202D000:                    # (the SMK-37: app.ld with HX at its place there, the host's own room)
+        ld = OUT / f"app-{BOARD}.ld"
+        t = (FW / "app.ld").read_text()
+        ld.write_text(t.replace("ORIGIN = 0x0202D000", f"ORIGIN = {HX_XIP:#010x}")
+)
+    tc("pi32v2/bin/ld", "--gc-sections", "-e", "_start", "-T", ld, OUT / "crt0.o", OUT / "fm1_vec.o",
+       OUT / "fm1_isr.o", OUT / "fm1_cpu1.o", OUT / f"{HOST}.o", OUT / "hx.o", "-o", elf)
+    for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin", "hx_text.bin", "hx_data.bin"):
+        (OUT / sect).unlink(missing_ok=True)
+    *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".hx", elf, OUT / "hx_text.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".hx_data", elf, OUT / "hx_data.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".data", elf, OUT / "data.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".ram_text", elf, OUT / "ramtext.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".c1_text", elf, OUT / "c1text.bin"),
+                               ("common/bin/objdump", "-t", elf),
+                               ("common/bin/objdump", "-d", elf),
+                               ("common/bin/objdump", "-d", "-j", ".ram_text", elf))
+    (OUT / f"{APP}.dis").write_text(dis)
+    (OUT / f"{APP}.syms").write_text(syms)
+
+    def symv(name):
+        return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
+    img = bytearray((OUT / "text.bin").read_bytes())
+    # .ram_text, .c1_text (the second core's loop) and .data follow .text at their load addresses, in that
+    # order; platform.c copies them by words at boot
+    for sect, lname in (("ramtext.bin", "_rt_load"), ("c1text.bin", "_c1_load"), ("data.bin", "_data_load")):
+        load = symv(lname)
+        if load % 4:
+            raise SystemExit(f"{lname} {load:#x} is not word aligned")
+        blob = (OUT / sect).read_bytes() if (OUT / sect).exists() else b""
+        if blob:
+            if load - APP_XIP < len(img):
+                raise SystemExit(f"{lname} overlaps the image")
+            img += b"\xff" * (load - APP_XIP - len(img))
+            img += blob
+    img += b"\xff" * (-len(img) % 4)
+    (OUT / "host.bin").write_bytes(img)
+    # HX: its header's size and CRC (src/ble/hx.h; the CRC is dock.c's crc_upd, zlib's)
+    hx = bytearray((OUT / "hx_text.bin").read_bytes())
+    if (OUT / "hx_data.bin").exists():          # its .data's load image, where the linker put it
+        hx += b"\xff" * (symv("_hx_data_load") - HX_XIP - len(hx)) + (OUT / "hx_data.bin").read_bytes()
+    if symv("hx_head") != HX_XIP or symv("_hx_end") != HX_XIP + len(hx) or len(hx) > HX_SIZE:
+        raise SystemExit(f"HX: {len(hx)} B, header at {symv('hx_head'):#x}, end {symv('_hx_end'):#x}: not as hx.h")
+    struct.pack_into("<II", hx, 4, len(hx), zlib.crc32(bytes(hx[16:])))
+    (OUT / "hx.bin").write_bytes(hx)
+    return bytes(img), syms, dis, rt, bytes(hx)
+
+
+def pack_slots(host, modules, hx):
+    # (hx empty: tools/build.py --no-ble, HX's flash left erased: the host finds no BLE)
+    """the app image: the host, 0xFF up to the slot table, the table, each module in its own 4 KiB
+    aligned slot, relocated to run there (hbmod.move); HX (BLE-MIDI) at its place at the top"""
+    import hbmod
+    if APP_XIP + len(host) > SLOT_TABLE:
+        raise SystemExit(f"the host ({len(host)} B) runs into the slot table at {SLOT_TABLE:#x}")
+    img = bytearray(host + b"\xff" * (SLOT_TABLE - APP_XIP - len(host)))
+    table = bytearray(b"\xff" * 0x1000)
+    slots = bytearray()
+    for i, path in enumerate(modules):
+        at = SLOT_FIRST + len(slots)
+        blob = hbmod.move(Path(path).read_bytes(), at)
+        h, _, _ = hbmod.parse(blob)
+        struct.pack_into("<IIII", table, 16 * i, 0x544F4C53, at, len(blob), h["crc"])   # "SLOT"
+        slots += blob + b"\xff" * (-len(blob) % 0x1000)
+        print(f"  slot {i}  {at:#010x}  {h['name']:<10} {len(blob):7} B, runs at {h['base']:#010x}")
+    img += table + slots
+    if hx and APP_XIP + len(img) > HX_XIP:
+        raise SystemExit(f"the modules end at {APP_XIP + len(img):#x}, in HX at {HX_XIP:#x}")
+    if hx:
+        img += b"\xff" * (HX_XIP - APP_XIP - len(img)) + hx
+    if len(img) > APP_SLOT:
+        raise SystemExit(f"host + modules: {len(img)} B > the app slot ({APP_SLOT} B)")
+    return bytes(img)
+
+
+def check(img, syms, dis, rt):
+    errors, notes = [], []
+    m = re.search(r"^([0-9a-f]+) .*\s_start$", syms, re.M)
+    if not m or int(m.group(1), 16) != APP_XIP:
+        errors.append(f"_start is not at {APP_XIP:#x}")
+    if img[:4] != bytes.fromhex("04818000"):
+        errors.append(f"image starts with {img[:4].hex()}, not the entry stub")
+    rt_calls = [ln for ln in rt.splitlines() if re.search(r"\bcall\b", ln)]
+    if rt_calls:                    # RAM code runs with the flash off: no calls into XIP
+        errors.append(f".ram_text contains calls: {rt_calls[:3]}")
+    else:
+        notes.append(f".ram_text: {len([ln for ln in rt.splitlines() if LINE.match(ln)])} insns, no calls")
+    mc1 = [re.search(r"^([0-9a-f]+) .*\s" + n + r"$", syms, re.M) for n in ("_c1_start", "_c1_end")]
+    c1 = re.search(r"Disassembly of section \.c1_text:\n(.*?)(?=\nDisassembly of section|\Z)", dis, re.S)
+    c1_calls = [ln.strip() for ln in (c1.group(1).splitlines() if c1 else [])
+                if re.search(r"\bcall\b", ln) and not re.search(r"\bcall r\d+\b", ln)]
+    if c1_calls:                    # its idle loop and no-op run while the flash may be off: the job only by pointer
+        errors.append(f".c1_text calls by address: {c1_calls[:3]}")
+    elif all(mc1):
+        notes.append(f".c1_text: {int(mc1[1].group(1), 16) - int(mc1[0].group(1), 16)} B, the second core's loop "
+                     "in RAM, calls only by pointer")
+    for ln in dis.splitlines():     # nothing may call or load an address in the chip ROM
+        mm = LINE.match(ln)
+        if not mm:
+            continue
+        for v in re.findall(r"= (-?\d+) <|call -?\d+ <[^:>]*: ([0-9a-f]+) >", mm.group(3)):
+            val = (int(v[0]) & 0xFFFFFFFF) if v[0] else int(v[1], 16) & 0xFFFFFFFF
+            if 0xFFC00000 <= val < 0xFFD00000:
+                errors.append(f"reference to ROM address {val:#010x}")
+    if APP_XIP + len(img) > SLOT_TABLE:
+        errors.append(f"host {len(img)} B runs into the slot table")
+
+    def sym(name):
+        mm = re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M)
+        return int(mm.group(1), 16) if mm else 0
+    ram = sym("_bss_end") - 0x01C08000
+    pool = sym("_pool_end") - 0x01C68C00
+    notes.append(f"host {len(img)} B of {SLOT_TABLE - APP_XIP}; RAM .data+.bss {ram} B of 49152; pool {pool} B of 46080 "
+                 "(the module RAM between)")
+    if ram > 48 * 1024:
+        errors.append(f"RAM .data+.bss {ram} B > 48 KiB")
+    return errors, notes
+
+
+# Every hardware register access lives in hal/. In src/ and loader/ (comments stripped):
+#  - no volatile pointer cast, except of a C object's address (`*(volatile T *)&x`: a read-once
+#    of a RAM flag shared with an ISR, e.g. usb.c ota_wire_send);
+#  - no literal in a register or reserved window (core SFRs 0x10000-0x13FFF, SFC 0x40000-0x43FFF,
+#    GPIO/IOMAP 0x50000-0x51FFF, CPU 0x1EE0000-0x1EEFFFF, RAM top 0x01C7F000- (boot info,
+#    mailbox, vectors), XIP 0x02000000-0x020FFFFF);
+#  - no inline asm, except the empty compiler barrier RING_PUBLISH() (emits no instruction);
+#  - no HAL register macro (a hal/ #define that is, or expands to, a volatile access).
+# Linker symbols (_bss_start[], _rt_load[], ...) are plain C objects and pass.
+MMIO_LIT = re.compile(r"\b0x0*(1[0-3][0-9a-f]{3}|4[0-3][0-9a-f]{3}|5[01][0-9a-f]{3}|1ee[0-9a-f]{4}|"
+                      r"1c7f[0-9a-f]{3}|20[0-9a-f]{5})u?l?\b", re.I)
+MMIO_CAST = re.compile(r"\(\s*(?:const\s+)?volatile\b[^()]*\*\s*\)(?!\s*&)")
+MMIO_ASM = re.compile(r"\b(?:__asm__|asm)\b(?!\s+volatile\s*\(\s*\"\"\s*:::\s*\"memory\"\s*\))")
+
+
+def mmio_check():
+    def strip(s):
+        s = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), s, flags=re.S)
+        return re.sub(r"//[^\n]*", "", s)
+    defs = {}
+    for h in sorted((FW / "hal").glob("*.h")):
+        for m in re.finditer(r"^#define\s+(\w+)(?:\([^)]*\))?\s+(.*)$", strip(h.read_text()), re.M):
+            defs[m.group(1)] = m.group(2)
+    regs = {n for n, b in defs.items() if re.search(r"\bvolatile\b", b)}
+    while True:                                   # macros built on register macros (FM1_WR_LIMIT_H -> FM1_X2)
+        more = {n for n, b in defs.items() if n not in regs and set(re.findall(r"\w+", b)) & regs}
+        if not more:
+            break
+        regs |= more
+    errors = []
+    for f in sorted([*(FW / "src").glob("*.[ch]"), *(FW / "loader").glob("*.c"), *(SRC / "modules").glob("*/*.c")]):
+        for no, ln in enumerate(strip(f.read_text()).splitlines(), 1):
+            where = f"{f.relative_to(SRC)}:{no}"
+            for rx, what in ((MMIO_LIT, "register/window address"), (MMIO_CAST, "volatile pointer cast"),
+                             (MMIO_ASM, "inline asm")):
+                m = rx.search(ln)
+                if m:
+                    errors.append(f"{where}: {what} outside hal/ ({m.group(0).strip()}); add a hal/ helper")
+            used = set(re.findall(r"\b[A-Z_][A-Z0-9_]*\b", ln)) & regs
+            if used:
+                errors.append(f"{where}: HAL register macro {sorted(used)[0]} outside hal/; use a hal/ helper")
+    return errors
+
+
+BOOT_SLOT = False                   # --boot-slot: the boot slot is in (a developer's build)
+APP_NAME = None                     # --app-name: the crash and rescue screens' name (dock.c's own: FM1-DOCK)
+SOLO = False                        # --name: a solo app (a new install starts its module, not the sine; no BLE-MIDI:
+                                    # its module and its data take HX's place)
+
+
+def main():
+    global PRODUCT, VERSION, BOOT_SLOT, APP, APP_NAME, SOLO, BOARD, BOARD_DEFS, SLOT_TABLE, SLOT_FIRST, APP_SLOT, HX_XIP, PACKAGE
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--board", choices=("fm1", "smk37"), help="the board: fm1 (default: $BOARD, else fm1) or smk37")
+    ap.add_argument("--model", choices=sorted(MODELS), help="smk37: the model's name, pro (default: $MODEL, else pro), "
+                    "elite or mke")
+    ap.add_argument("--release", metavar="X.Y", help="release build: version string X.Y (the identity stays fm1-dock's)")
+    ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
+    ap.add_argument("--modules", help=f"the modules to pack, in slot order (default: {','.join(PACKAGE)}; every "
+                    "other modules/<dir> is built as a .dock to deploy)")
+    ap.add_argument("--no-package", action="store_true", help="no .fwsc (and no SDK needed): the app and its XIP image")
+    ap.add_argument("--no-ble", action="store_true", help="no BLE-MIDI (HX) in the image: no BLUETOOTH line, its "
+                    "40 KiB free for modules")
+    ap.add_argument("--boot-slot", action="store_true", help="a developer's build: it takes a whole firmware into its boot "
+                    "slot (tools/hbboot.py), which takes over at power-on; a release has none")
+    ap.add_argument("--name", help="the outputs' name (build/NAME.bin, .fwsc, .syms): a solo app's")
+    ap.add_argument("--app-name", help="the name on the crash and USB rescue screens")
+    ap.add_argument("--identity", help="the package identity (FM-1_9NN) in place of fm1-dock's")
+    ap.add_argument("--pack", type=Path, help="data for the module, right after the modules (in the app slot)")
+    a = ap.parse_args()
+    BOARD = (a.board or os.environ.get("BOARD") or "fm1").lower().replace("-", "")
+    model = (a.model or os.environ.get("MODEL") or "pro").lower()
+    if BOARD not in ("fm1", "smk37") or model not in MODELS or (model != "pro" and BOARD != "smk37"):
+        raise SystemExit(f"BOARD={BOARD} MODEL={model}: fm1, or smk37 with pro, elite or mke")
+    fm1pkg_make.set_board(BOARD)
+    APP_SLOT = fm1pkg_make.APP_SLOT
+    if BOARD == "fm1" and a.boot_slot:
+        raise SystemExit("--boot-slot: the FM-1 has no boot slot since the map of 2026-11-14 (docs/decisao-mapa-flash.html)")
+    if BOARD == "smk37":            # (hal/fm1_flash_map.h, src/dock.c HB_TABLE_AT: the slot table at flash 0x18000)
+        if a.boot_slot or a.name or a.pack or a.identity:
+            raise SystemExit("--board smk37: no boot slot, no solo app (--name, --pack, --identity) yet")
+        BOARD_DEFS = ["-DBOARD_SMK37=1", *([f'-DSMK_MODEL="{MODELS[model]}"'] if model != "pro" else [])]
+        SLOT_TABLE = 0x02014000
+        SLOT_FIRST = SLOT_TABLE + 0x1000
+        PRODUCT = MODELS[model] + PRODUCT[PRODUCT.index("_"):]
+        APP = APP + "-smk37" + ("" if model == "pro" else "-" + model)
+        PACKAGE = ["cs1", "scintilla", "obervave"]   # (the SMK-37's: its map is as it was)
+        HX_XIP = 0x02061000         # (src/ble/hx.h HX_AT on the SMK-37: flash 0x65000, the top of its app slot)
+    BOOT_SLOT = a.boot_slot
+    APP = a.name or APP
+    APP_NAME = a.app_name
+    SOLO = bool(a.name)
+    if a.identity:
+        if not re.fullmatch(r"FM-1_9\d\d", a.identity):
+            raise SystemExit(f"--identity {a.identity}: FM-1_9NN (the installers' loader wants 9NN)")
+        PRODUCT = a.identity
+    name = f"{APP}.fwsc"
+    if a.release:                   # one digit each (X.Y; a .Z only in the text)
+        m = re.fullmatch(r"(\d)\.(\d)(\.\d)?(-[A-Za-z0-9]+)?", a.release)
+        if not m:
+            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y-suffix, one digit each")
+        VERSION = m[1] + "." + m[2] + (m[3] or "")
+        name = f"{APP}-{a.release}.fwsc" if BOARD == "fm1" else f"{APP.replace('-smk37', '-' + a.release + '-smk37')}.fwsc"
+    fm1pkg_make.SDK = a.sdk
+    if not a.no_package:
+        for rel, sha in SDK_SHA256.items():      # fail early without the SDK
+            if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:
+                print(f"warning: SDK {rel} differs from AC79NN_SDK_V1.2.1; the package will not match the reference")
+    OUT.mkdir(parents=True, exist_ok=True)
+    import hbmod
+    every = sorted(d for d in (SRC / "modules").iterdir() if d.is_dir() and d.name != "lib" and any(d.glob("*.c")))
+    dirs = [Path(d).resolve() if "/" in d else SRC / "modules" / d
+            for d in (a.modules if a.modules is not None else ",".join(PACKAGE)).split(",") if d]
+    ota = build_loader()
+    host, syms, dis, rt, hx = build_app()
+    errors, notes = check(host, syms, dis, rt)
+    hal_err = mmio_check()
+    errors += hal_err
+    if not hal_err:
+        notes.append("register access: hal/ only (src/, loader/, modules/ clean)")
+    for n in notes:
+        print("  ok   ", n)
+    for e in errors:
+        print("  FAIL ", e)
+    if errors:
+        raise SystemExit("build: checks failed")
+    mods = [hbmod.build_module(d) for d in dirs]
+    for d in every if not a.name else []:       # the others as files to deploy (tools/dock.py deploy, the tests)
+        if d not in dirs:
+            hbmod.build_module(d)
+    if (a.pack or a.name) and hx and not a.no_ble:   # (a solo app: its module and its data take HX's place)
+        print("note     a solo app (--name / --pack): no BLE-MIDI in this image")
+    if a.no_ble or a.pack or a.name:
+        hx = b""
+    img = pack_slots(host, mods, hx)
+    if a.pack:                                  # the module's data after the last module (its own end + a scan)
+        img += b"\xff" * (-len(img) % 4) + a.pack.read_bytes()
+        img += b"\xff" * (-len(img) % 4)
+        if len(img) > APP_SLOT:
+            raise SystemExit(f"app {len(img)} B with {a.pack}: more than the app slot ({APP_SLOT})")
+    (OUT / f"{APP}.bin").write_bytes(img)
+    (OUT / f"{APP}_xip.bin").write_bytes(b"\0" * 0x120 + img)
+    print(f"host     {OUT / 'host.bin'}  {len(host)} B of {SLOT_TABLE - APP_XIP}")
+    print(f"hx       {OUT / 'hx.bin'}  {len(hx)} B of {HX_SIZE} (BLE-MIDI, flash {HX_XIP - 0x02000000 + 0x4000:#x})"
+          if hx else "hx       none (--no-ble)")
+    print(f"app      {OUT / (APP + '.bin')}  {len(img)} B of {APP_SLOT}, {len(mods)} modules")
+    print(f"fm1-emu  {OUT / (APP + '_xip.bin')}  (fm1-live --bin)")
+    if a.no_package:
+        return 0
+    pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT)
+    (OUT / name).write_bytes(pkg)
+    print(f"loader   {LDR / 'ota.bin'}  {len(ota)} B")
+    print(f"package  {OUT / name}  {len(pkg)} B, identity {PRODUCT}, board {BOARD}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,18 @@
+{
+ "format": "fm1pt-songpack-index",
+ "version": 1,
+ "packs": [
+  {
+   "id": "cifras-teste",
+   "file": "cifras-teste.json",
+   "name": {
+    "pt": "Módulo de teste · Cifras do Wellington",
+    "en": "Test module · Wellington's chord sheets",
+    "es": "Módulo de prueba · Cifrados de Wellington"
+   },
+   "season": null,
+   "published": "2026-11-18",
+   "songs": 9
+  }
+ ]
+}

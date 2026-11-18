@@ -1,0 +1,43 @@
+# FM1 Pocket Tutor: o repositório público leva só o firmware e a página web das aulas.
+# Tudo fica de fora por padrão; cada linha "!" abaixo traz uma parte de volta.
+/*
+!/.gitignore
+!/LICENSE
+!/LICENSES/
+!/LICENSING.md
+!/README.md
+!/build.sh
+!/fmhub.json
+!/assets/
+!/firmware/
+!/tools/
+!/tests/
+
+# módulos de som: só os que o tutor usa (FM6 é o motor; SINE é a reserva)
+!/modules/
+/modules/*
+!/modules/lib/
+!/modules/module.ld
+!/modules/fm6/
+!/modules/sine/
+
+# página web: as aulas e as notas de versão
+!/docs/
+/docs/*
+!/docs/prototipo-aulas.html
+!/docs/API.md
+!/docs/RULES.md
+!/docs/MAKE-IT-YOURS.md
+!/docs/DAP.md
+!/docs/releases/
+!/docs/media/
+/docs/media/*
+!/docs/media/pocket-tutor-screen.png
+
+__pycache__/
+*.pyc
+.DS_Store
+!/docs/media/card.png
+!/docs/media/telas-fm1.png
+!/docs/media/webapp-telas.png
+!/docs/songpacks/
