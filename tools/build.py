@@ -193,8 +193,8 @@ def build_loader():
 
 APP = "fm1-pocket-tutor"                    # the outputs' name (--name) (build/fm1-pocket-tutor.bin, .fwsc, .syms, ...)
 HOST = "dock"
-PACKAGE = []                        # the FM-1's package: no modules since the map of 2026-11-14 (the phone sends them)                       # the host's source: firmware/src/dock.c
-SLOT_TABLE = 0x0202C000             # firmware/src/dock.c HB_TABLE_AT (flash 0x30000)
+PACKAGE = ["fm6"]                   # FM1 Pocket Tutor: the package carries FM6 (a new install plays at once), below HX                       # the host's source: firmware/src/dock.c
+SLOT_TABLE = 0x0201C000             # firmware/src/dock.c HB_TABLE_AT (flash 0x20000; FM1 Pocket Tutor 0.2: FM6 + BLE)
 SLOT_FIRST = SLOT_TABLE + 0x1000
 HX_XIP = 0x0202D000                 # firmware/src/ble/hx.h HX_AT (flash 0x31000): BLE-MIDI, a unit of its own (SMK-37: main)
 HX_SIZE = 0xA000

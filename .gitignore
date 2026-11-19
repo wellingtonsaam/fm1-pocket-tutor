@@ -41,3 +41,8 @@ __pycache__/
 !/docs/media/telas-fm1.png
 !/docs/media/webapp-telas.png
 !/docs/songpacks/
+# a página das aulas usa o leitor de MIDI e a música de exemplo dos spikes (T71); o resto dos spikes fica de fora
+!/docs/spikes/
+/docs/spikes/*
+!/docs/spikes/smf.js
+!/docs/spikes/brilha.js

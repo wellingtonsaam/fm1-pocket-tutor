@@ -2,7 +2,7 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Felucca memory map.
  * Code + constants execute in place from XIP (app.bin offset 0 = 0x02000120),
- * up to fm1-dock's slot table at 0x0202C000 (flash 0x30000).
+ * up to the slot table at 0x0201C000 (flash 0x20000; fm1-dock had it at 0x30000).
  * 0x01C00000..0x01C04000 holds .ram_text (code that must run while the flash
  * is busy: the flash driver) and .c1_text (the second core's waiting loop,
  * hal/fm1_cpu1.h); 0x01C04000..0x01C08000 is a module's .ram_text.
@@ -12,7 +12,7 @@
  * 0x01C7FD50.. is reserved: boot_info, boot-state mailbox, vector table. */
 MEMORY
 {
-    XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x2BEE0
+    XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x1BEE0   /* to the slot table, 0x0201C000 (FM1 Pocket Tutor 0.2) */
     HX     (rx)  : ORIGIN = 0x0202D000, LENGTH = 0xA000   /* flash 0x31000: BLE-MIDI (src/ble/hx.h) */
     RAMTEXT (rwx): ORIGIN = 0x01C00000, LENGTH = 0x4000
     RAM    (rwx) : ORIGIN = 0x01C08000, LENGTH = 48K

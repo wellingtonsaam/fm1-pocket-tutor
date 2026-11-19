@@ -13,6 +13,7 @@ the Nth erase / program).
   - a module's bank (CS-1's user presets) is there after a reboot.
 The test module (tests/modules/slow) is built here with tools/hbmod.py (JIELI_TOOLCHAIN)."""
 import argparse
+import re
 import os
 import shutil
 import struct
@@ -136,7 +137,9 @@ def main():
               [(n, v, ok) for n, v, _, ok in t] == [("TESTSINE", 1, True)],
               f"a new module over the DIN jack: {ops(out)} erases / programs, in flash at {t[0][2]:#x} if any, then playing")
         ok, log = boots_and_plays(f1)
-        check("deploy_reboot", ok and "TESTSINE" in log and "started 00000001" in log,
+        # (FM1 Pocket Tutor 0.2: the package carries FM6, so the deployed module is not module 1 any more:
+        # what matters is that the module started after the reboot is TESTSINE)
+        check("deploy_reboot", ok and "TESTSINE" in log and re.search(r"started 0000000\d\n\d+ TESTSINE", log) is not None,
               "after a reboot it is in the list, starts again and plays")
         f2 = wd / "f2.bin"
         shutil.copy(f1, f2)
@@ -156,9 +159,10 @@ def main():
             keys.append(f"{int(t)}:m{f.hex()}")
             t += len(f) * hbdeploy.BYTE_MS + (400 if c == hbdeploy.BEGIN else 0)
         out, log = live("shot", int(t) + 2500, keys + [f"{int(t) + 2000}:{NOTE}"], f3)
+        after = log.split("deploy failed")[-1]          # what played before comes back: NO MODULE, or the package's module
         check("bad_transfer", "deploy failed 00000001" in log and ops(out) == 0 and
-              "no module: silent" in log.split("deploy failed")[-1],
-              f"a chunk changed on the way: BAD CRC at COMMIT, {ops(out)} erases / programs, NO MODULE again")
+              ("no module: silent" in after or ("started" in after and peak(out) > 1000)),
+              f"a chunk changed on the way: BAD CRC at COMMIT, {ops(out)} erases / programs, what played before plays again")
 
         # power cuts at every erase / program
         def cuts(name, base, blob, allowed):
@@ -211,7 +215,7 @@ def main():
         img = (SRC / "build" / "fm1-pocket-tutor.bin").read_bytes()
         names = []
         for i in range(32):
-            magic, at, size, crc = struct.unpack_from("<IIII", img, 0x30000 - 0x120 + 16 * i)
+            magic, at, size, crc = struct.unpack_from("<IIII", img, 0x20000 - 0x120 + 16 * i)
             if magic != 0x544F4C53:
                 break
             names.append(hbmod.parse(img[at - 0x02000120:at - 0x02000120 + size])[0]["name"])

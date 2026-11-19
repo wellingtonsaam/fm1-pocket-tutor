@@ -66,7 +66,7 @@ def slots():
     img = APP.read_bytes()
     out = []
     for i in range(32):
-        magic, at, size, crc = struct.unpack_from("<IIII", img, 0x2C000 + 16 * i)   # (dock.c HB_TABLE_AT 0x30000)
+        magic, at, size, crc = struct.unpack_from("<IIII", img, 0x1C000 + 16 * i)   # (dock.c HB_TABLE_AT 0x20000)
         if magic != 0x544F4C53:
             break
         h, _, _ = hbmod.parse(img[at - 0x02000000:at - 0x02000000 + size])
@@ -80,10 +80,17 @@ def start():
     return 1 + [n for n, _, _ in slots()].index("SINE")
 
 
-def pick(name):
-    """the key script that opens the picker and loads `name` (at 700..1150 ms)"""
+def pick(name, frm=None):
+    """the key script that opens the picker and loads `name` (at 700..1150 ms); `frm`: the picker's line it opens on
+    (the module playing; start() when the case starts from BASE)"""
     idx = 1 + [n for n, _, _ in slots()].index(name)
-    return f"700:8,750:8^,900:e6:{idx - start()},1100:8,1150:8^"
+    return f"700:8,750:8^,900:e6:{idx - (start() if frm is None else frm)},1100:8,1150:8^"
+
+
+def packaged():
+    """how many modules the image itself carries (FM1 Pocket Tutor 0.2: FM6), before any deploy"""
+    img = APP.read_bytes()
+    return sum(1 for i in range(32) if struct.unpack_from("<I", img, 0x1C000 + 16 * i)[0] == 0x544F4C53)
 
 
 O_CC7, O_MASTER_CC7, O_CH, O_LOCAL, O_EQ, O_KNOBS, O_THRU, O_ABOUT = range(8)   # the OPTIONS lines (dock.c), past the
@@ -478,7 +485,7 @@ def fm6_cases():
     syx = dx7_voice("HARBOR X2", 2)
     steps = [b"B" + struct.pack("<II", len(syx), 0)]
     steps += [b"D" + struct.pack("<I", a) + syx[a:a + 256] for a in range(0, len(syx), 256)] + [b"E"]
-    k, at = [pick("FM6")], 1500
+    k, at = [pick("FM6", frm=1 if packaged() else 0)], 1500
     for i, st in enumerate(steps):
         f = hbdeploy.frame(hbdeploy.MODULE, i, st)
         k.append(f"{at}:m{f.hex()}")
@@ -489,7 +496,7 @@ def fm6_cases():
                  extra=("--flash", str(flash)))
     t = onset_frames(s)
     f1 = upward(t, 0.2, 0.9)
-    s2, log2 = run("fm6_sysex2", pick("FM6") + ",1800:21,2300:21^", 2600, extra=("--flash", str(flash)))
+    s2, log2 = run("fm6_sysex2", pick("FM6", frm=1 + [n for n, _, _ in slots()].index("FM6")) + ",1800:21,2300:21^", 2600, extra=("--flash", str(flash)))
     check("fm6_sysex", "fm6: voices in 00000001" in log and abs(f1 - 880) < 10 and "voices 0000001a" in log2
           and peak(s2, 1.7, 2.2) > 1000,
           f"a DX7 voice dump sent to FM6 plays at once (A4 at {f1:.0f} Hz: its OP1 at x2) and is there after a power-on")
@@ -549,22 +556,27 @@ def main():
     none = OUT / "no_module.flash"
     none.unlink(missing_ok=True)
     s, log = run("no_module", "1000:14,1600:14^", 2200, extra=("--flash", str(none)))
-    check("no_module", "no module: silent" in log and "started 00000000" in log and "slot ok" not in log and
-          peak(s, 0.0, 2.2) == 0, "nothing sent yet (an empty flash): NO MODULE starts, silent; a key plays nothing")
+    if packaged():                                  # (FM1 Pocket Tutor 0.2: the package's FM6 plays at once)
+        check("no_module", "started 00000001" in log and "slot ok" in log and peak(s, 0.0, 2.2) > 1000,
+              "nothing sent yet (an empty flash): the package's module starts and a key plays it")
+    else:
+        check("no_module", "no module: silent" in log and "started 00000000" in log and "slot ok" not in log and
+              peak(s, 0.0, 2.2) == 0, "nothing sent yet (an empty flash): NO MODULE starts, silent; a key plays nothing")
 
     # OPTIONS, ABOUT: its page, the version on its first line in the accent colour (8 px a character, from x 4);
     # HOME: OPTIONS again, ABOUT the line picked
     at = f"700:8,750:8^,900:e6:{1 + len(names) + O_ABOUT - start()},1100:3,1150:3^"
     _, log = run("about", at, 1700)
-    ver = (re.findall(r"fm1-dock (\S+) boot", log) or ["?"])[-1]
+    app, ver = (re.findall(r"(fm1-dock|fm1-pocket-tutor) (\S+) boot", log) or [("fm1-dock", "?")])[-1]
     x0, x1 = acc_span("about", 28, 44)
     _, _ = run("about_back", at + ",1500:8,1550:8^", 2000)
     y = 50 + O_ABOUT * 18                   # (dock.c OPT_Y)
     b0, b1 = acc_span("about_back", y, y + 18)
-    n = len(f"fm1-dock {ver}") + (10 if "." in ver else 0)   # (a release's: " (abc1234)" after it)
+    shown = "Pocket Tutor" if app == "fm1-pocket-tutor" else app   # (dock.c ABOUT: the FM1 Pocket Tutor shows its short name)
+    n = len(f"{shown} {ver}") + (10 if "." in ver else 0)   # (a release's: " (abc1234)" after it)
     check("about", re.fullmatch(r"\d\.\d(\.\d)?|[0-9a-f]{7}\+?|unknown", ver) is not None and x0 >= 2 and
           abs(x1 - x0 - 8 * n) <= 8 and acc_span("about_back", 28, 44) == (0, 0) and b1 - b0 >= 30,
-          f"ABOUT: fm1-dock {ver} (the boot log) on its page, {x1 - x0} px; HOME: OPTIONS, ABOUT picked ({b1 - b0} px)")
+          f"ABOUT: {app} {ver} (the boot log) on its page, {x1 - x0} px; HOME: OPTIONS, ABOUT picked ({b1 - b0} px)")
 
     # INFO (0x03) over USB, as tools/dock.py info and the page ask it: ABOUT's facts in a record; an unknown command
     # (0x04) answered bad message, as an older fm1-dock answers INFO
@@ -576,7 +588,7 @@ def main():
           i["flash_id"] in (0x856014, 0xB36014, 0xEB6014) and i["flash_size"] == 1 << 20 and i["soc"] == "AC791N" and
           i["mod_ram"] == 0x54C00 and 0 < i["largest"] <= i["free"] and i["cores"] in (1, 2) and
           any(c == 0x04 and q == 6 and d[:1] == b"\x0a" for c, q, d in rep),
-          f"INFO: fm1-dock {i and i['version']} ({i and i['build']}) on {i and i['model']}, {i and i['soc']}, flash "
+          f"INFO: {app} {i and i['version']} ({i and i['build']}) on {i and i['model']}, {i and i['soc']}, flash "
           f"{i and i['flash_id']:06X}, {i and i['cores']}CPU, add-ons {i and i['free'] // 1024} KiB free; 0x04: bad message"
           if i else f"INFO: no record ({rep})")
 

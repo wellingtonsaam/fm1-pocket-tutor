@@ -8,7 +8,7 @@
 :root{--bg:#0f1115;--card:#1a1e26;--card2:#222834;--line:#343c4c;--txt:#f3f5f8;--mut:#b9c1ce;--cue:#ffb020;--root:#c18bff;--ok:#3ddc84;--bad:#ff5a5f;--acc:#6aa8ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
-#app{height:100dvh;display:flex;flex-direction:column}
+#app{height:100dvh;display:flex;flex-direction:column;overflow-x:clip}
 header{flex:none;height:52px;display:flex;align-items:center;gap:8px;padding:4px 10px;background:#141821;border-bottom:1px solid var(--line)}
 header h1{flex:1;margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 button{font:inherit;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:12px;min-height:44px;padding:0 14px;cursor:pointer}
@@ -65,6 +65,8 @@ button .ic{margin-right:6px}.stars .ic{width:1em;height:1em;margin:0}.big-res .i
 .expl{font-size:16px}
 .big-res{font-size:44px;font-weight:800}
 #rot{display:none;background:#3a2f10;color:#ffe29a;padding:8px 12px;font-size:15px;text-align:center}
+/* T79: celular em pé — o cabeçalho quebra em linhas em vez de passar da largura */
+@media (max-width:700px){header{height:auto;flex-wrap:wrap;row-gap:6px;padding:6px 8px}header h1{flex:1 1 calc(100% - 110px);font-size:17px}.tg{padding:0 8px;font-size:14px}.bpmc input[type=range]{min-width:0;flex-basis:100%}.cmh .views{margin-left:auto}}
 @media (orientation:portrait){#rot{display:block}.grid2{grid-template-columns:1fr}.target{font-size:32px}}
 @media (max-height:430px){main{padding:8px 10px;gap:8px}.card{padding:10px 12px}}
 /* ---- teclado ---- */
@@ -85,7 +87,8 @@ button .ic{margin-right:6px}.stars .ic{width:1em;height:1em;margin:0}.big-res .i
 .key.bad{--c:var(--bad)}.key.bad::after{opacity:.9;animation:none}
 .key.down{transform:translateY(2px);filter:brightness(.88)}
 .key.down:not(.cue):not(.ok):not(.bad):not(.root)::after{--c:#6aa8ff;opacity:.45}
-@keyframes pulse{0%,100%{opacity:.1}50%{opacity:.95}}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.95}}
+.key.lit::after{animation:none!important;opacity:.9}   /* T80: tocando agora (acorde ou nota): a tecla inteira acesa, firme */
 .led{position:absolute;left:50%;top:7px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#777;opacity:.35}
 .key.cue .led,.key.root .led{background:var(--c);opacity:1;box-shadow:0 0 12px 4px var(--c)}
 .lb{position:absolute;left:0;right:0;bottom:6px;text-align:center;font:700 14px/1 system-ui;color:#2a2a2a;opacity:0}
@@ -115,9 +118,55 @@ button .ic{margin-right:6px}.stars .ic{width:1em;height:1em;margin:0}.big-res .i
 #pchelp.show{display:block}
 #pchelp kbd{font:700 13px ui-monospace,Menlo,monospace;background:#1d2533;border:1px solid #6aa8ff;border-radius:4px;padding:0 5px}
 #btHelp{padding:0 10px}#btHelp .ic{width:20px;height:20px;margin:0;vertical-align:-.3em}
+#voicedlg{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:14px;padding:16px 18px;width:min(720px,calc(100vw - 32px))}
+#voicedlg h3{font-size:14px;color:var(--mut);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.06em}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.vbtn{appearance:none;text-align:left;cursor:pointer;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px}
+.vbtn small{display:block;color:var(--mut);font-size:12px}
+.vbtn[aria-pressed="true"]{border:2px solid var(--acc);background:rgba(106,168,255,.15)}
+#voicemsg{font-size:14px;color:var(--mut);margin-top:12px}
 #helpdlg{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:14px;padding:16px 18px;width:min(640px,calc(100vw - 32px))}
 #helpdlg::backdrop{background:rgba(0,0,0,.6)}#helpdlg .hhd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}#helpdlg h2{margin:0;font-size:20px}
 select.tg{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:10px;background:var(--card2);color:var(--txt);border:1px solid var(--line)}  /* PT · EN · ES */
+
+/* T71 · praticar a música: seletor de vista e BPM (Figma 58:5270) */
+.lbl{font-weight:700;margin:10px 0 6px}.lbl:first-child{margin-top:0}
+.views{display:flex;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;flex-wrap:wrap}
+.views button{flex:1;border:0;background:none;border-radius:9px;padding:8px 10px;min-height:0;text-align:center}
+.views button[aria-selected=true]{background:var(--acc);color:#0f1115;font-weight:700}
+.views button small{display:block;font-size:12px;opacity:.8;font-weight:400}
+.views button:disabled{opacity:.4;cursor:not-allowed}
+.bpmc{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bpmc input[type=number]{width:78px;font:800 24px/1 system-ui;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:6px 6px;text-align:center}
+.bpmc input[type=number].mudou{border-color:var(--acc)}
+.bpmc input[type=range]{flex:1;min-width:120px}
+.bpmc .u{font-weight:700;color:var(--mut)}
+.pchips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
+.pchips span,.pchips button{font:700 14px ui-monospace,Menlo,monospace;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;min-height:0;color:var(--txt)}
+.pchips .now{background:var(--cue);color:#0f1115;border-color:var(--cue)}
+.pchips .feita{color:var(--ok)}.pchips button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.pbars{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:4px 0 8px}
+.pbar{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card2)}
+.pbar i{flex:1;font:700 14px ui-monospace,Menlo,monospace;font-style:normal;text-align:center;padding:9px 2px;border-left:1px solid var(--line)}
+.pbar i:first-child{border-left:0}.pbar i.seg{color:var(--mut)}.pbar i.now{background:var(--cue);color:#0f1115}
+.pvnow{font-weight:700;font-size:18px;margin-top:6px}
+/* T67 · mapa dos acordes: um mini teclado do FM-1 por acorde, em Slides ou Grade (Figma 54:4722) */
+.cmh{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0 6px}
+.cmh .views{flex:none}.cmh .views button{flex:none;padding:6px 12px}
+.mk{position:relative;display:flex;height:70px;border-radius:4px;overflow:hidden}
+.mk i{flex:1;background:#e9e9ec;border:1px solid #888;border-radius:0 0 3px 3px;font-style:normal}
+.mk b{position:absolute;top:0;height:62%;background:#15171b;border-radius:0 0 3px 3px;z-index:1}
+.mk .on,.mk .rt{background:#ffd60a!important}   /* app/led-1-cor (Figma 63:5927, 59:5611, 63:6090) */
+.cslide{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.cslide .cs-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.cslide .cs-h b{font-size:36px;line-height:1}
+.cslide .mk{height:120px}.cslide .cs-n{color:var(--mut);margin-top:8px}.cslide.now{border-color:var(--cue);box-shadow:0 0 0 2px var(--cue)}
+.cnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.cnav .dots{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:14px}.cnav .dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.cnav .dots i.on{background:var(--acc)}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.cgrid button{text-align:left;padding:8px 10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;min-height:0}
+.cgrid button.now{border-color:var(--cue);box-shadow:0 0 0 2px var(--cue)}
+.cgrid button.hit,.cslide.hit{animation:mapHit .4s ease-out}
+@keyframes mapHit{0%{background:rgba(255,214,10,.45);box-shadow:0 0 0 6px rgba(255,176,32,.55)}100%{background:var(--card2);box-shadow:0 0 0 2px var(--cue)}}.cgrid .cg-h{display:flex;align-items:baseline;gap:6px;margin-bottom:6px}.cgrid .cg-h b{font-size:20px}.cgrid .cg-n{color:var(--mut);font-size:12px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -131,6 +180,7 @@ select.tg{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:1
     <button class="tg" id="tgMono" aria-pressed="false" data-act="tg:mono">LED 1 cor</button>
     <button class="tg" id="tgPc" aria-pressed="false" data-act="tg:pc" title="Tocar com o teclado do computador e montar acordes com o mouse"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 16h8"/></svg>Computador</button>
     <button class="tg" id="btFm" aria-pressed="false" data-act="midi" title="Conectar o FM-1 por MIDI (Chrome ou Edge)"><span class="st" id="fmDot"></span>FM-1</button>
+    <button class="tg" id="btVoice" data-act="voice" title="Escolher o timbre do FM-1"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> <span id="voiceName">Timbre</span></button>
     <button class="tg help" id="btHelp" data-act="help" aria-label="Ajuda" title="Ajuda"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
   </header>
   <div id="midibar" role="status">
@@ -144,16 +194,21 @@ select.tg{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:1
   <div id="pchelp">Modo computador: a fileira de baixo (<kbd>Z</kbd>…<kbd>/</kbd>) toca Fá3–Lá4 e a de cima (<kbd>Q</kbd>…<kbd>U</kbd>) toca Lá4–Sol5. As pretas ficam na fileira acima de cada uma. Acorde: segure as teclas juntas, ou clique nas teclas da tela uma a uma (elas ficam presas até o próximo passo; clique de novo para soltar).</div>
   <div id="rot">Dica: gire o celular para a horizontal — o teclado fica do tamanho do FM-1.</div>
   <main id="view"></main>
+  <dialog id="voicedlg" aria-labelledby="voice-t"><div class="hhd"><h2 id="voice-t">Timbre do FM-1</h2><button class="tg" data-act="voiceclose">Fechar</button></div><div id="voice-body"></div><div id="voicemsg"></div></dialog>
   <dialog id="helpdlg" aria-labelledby="help-t"><div class="hhd"><h2 id="help-t">Ajuda</h2><button class="tg" data-act="helpclose">Fechar</button></div><div id="help-body"></div></dialog>
+  <input type="file" id="midfile" accept=".mid,.midi,audio/midi" hidden>
   <input type="file" id="cpfile" accept=".cho,.crd,.pro,.chopro,.chordpro,.md,.txt,.json" multiple hidden>
   <section id="kbwrap"><div id="kb" aria-label="Teclado virtual do FM-1, 27 teclas, Fá3 a Sol5"></div></section>
 </div>
 
+<script src="spikes/smf.js"></script>
+<script src="spikes/brilha.js"></script>
 <script>
 
 // Idioma (pedido de 18/11/2026): português, inglês e espanhol. O app escreve em português; esta camada traduz tudo o
 // que aparece na tela (textos, placeholder, title, aria-label, alertas) e os nomes das notas (Dó → C / Do).
 const L10N={"dict": {"en": {"FM1 Pocket Tutor · aulas": "FM1 Pocket Tutor · lessons", "Som": "Sound", "Nomes": "Names", "LED 1 cor": "1-color LED", "Computador": "Computer", "‹ Voltar": "‹ Back", "Voltar": "Back", "Entrada": "Input", "LEDs": "LEDs", "Calibrar": "Calibrate", "Testar LEDs": "Test LEDs", "Desconectar": "Disconnect", "— nenhuma —": "— none —", "Conectar o FM-1 por MIDI (Chrome ou Edge)": "Connect the FM-1 over MIDI (Chrome or Edge)", "Luzes guia: notas no canal 16 para o firmware FM1 Pocket Tutor. Em outros firmwares, deixe em — nenhuma —": "Guide lights: notes on channel 16 for the FM1 Pocket Tutor firmware. With other firmwares, leave it on — none —", "Teclado virtual do FM-1, 27 teclas, Fá3 a Sol5": "The FM-1's virtual keyboard, 27 keys, F3 to G5", "Tocar com o teclado do computador e montar acordes com o mouse": "Play with the computer keyboard and build chords with the mouse", "Dica: gire o celular para a horizontal — o teclado fica do tamanho do FM-1.": "Tip: turn the phone sideways — the keyboard becomes the size of the FM-1.", "Protótipo sem FM-1 conectado.": "Prototype with no FM-1 connected.", "O teclado de baixo faz o papel do FM-1 (27 teclas, Fá3–Sol5). Toque nele livremente ou escolha uma aula.": "The keyboard below stands in for the FM-1 (27 keys, F3–G5). Play it freely or pick a lesson.", "pisca: toque esta": "blinking: play this one", "fundamental": "root", "certo": "right", "errado": "wrong", "No FM-1 real os LEDs têm uma cor só (use \"LED 1 cor\").": "On the real FM-1 the LEDs have a single color (use \"1-color LED\").", "FM-1:": "FM-1:", "ligue pelo cabo USB (ou MIDI) e toque em": "connect it with the USB (or MIDI) cable and tap", "lá em cima. Só funciona no": "up top. It only works in", "ou no Edge: o Safari não tem Web MIDI.": "or Edge: Safari has no Web MIDI.", "Sem o FM-1:": "Without the FM-1:", "ligue": "turn on", "para tocar com o teclado do computador e montar acordes clicando.": "to play with the computer keyboard and build chords by clicking.", "novo": "new", "Abrir catálogo": "Open catalog", "Abrir minhas músicas": "Open my songs", "Importar cifra": "Import chord sheet", "Importar cifra (ChordPro)": "Import chord sheet (ChordPro)", "Apagar minhas músicas": "Delete my songs", ".cho, .pro ou .md no formato do template: só os acordes de cada seção ficam guardados.": ".cho, .pro or .md in the template format: only each section's chords are kept.", "Buscar música ou artista": "Search song or artist", "Nenhuma música encontrada.": "No song found.", "1 · Geografia do teclado": "1 · Keyboard geography", "Memória espacial: onde cada tecla mora": "Spatial memory: where each key lives", "2 · Escala de Dó maior": "2 · C major scale", "Tom, tom, semitom, tom, tom, tom, semitom": "Whole, whole, half, whole, whole, whole, half", "3 · Acordes (tríades)": "3 · Chords (triads)", "Três notas juntas, em bloco": "Three notes together, as a block", "4 · Inversões": "4 · Inversions", "Mesmas notas, outra ordem": "Same notes, another order", "5 · Campo harmônico de Dó": "5 · Chords of the key of C", "Os acordes que vivem juntos na tonalidade": "The chords that live together in the key", "6 · Catálogo · Bloco 1: Fundamentos": "6 · Catalog · Block 1: Fundamentals", "Tríades básicas, 3 a 4 acordes, pulso constante (só os acordes)": "Basic triads, 3 to 4 chords, steady pulse (chords only)", "7 · Minhas músicas": "7 · My songs", "Cifras importadas (ChordPro): só os acordes de cada seção": "Imported chord sheets (ChordPro): only each section's chords", "Ache os Dós": "Find the Cs", "2 âncoras do teclado": "2 keyboard anchors", "Grupos de 2 e 3 pretas": "Groups of 2 and 3 black keys", "O mapa visual do piano": "The piano's visual map", "Brancas: Dó a Si": "White keys: C to B", "As 7 notas naturais": "The 7 natural notes", "Subindo uma oitava": "Up one octave", "Dó4 → Dó5": "C4 → C5", "Descendo uma oitava": "Down one octave", "Dó5 → Dó4": "C5 → C4", "Teclado inteiro": "The whole keyboard", "Fá3 → Sol5, todas as brancas": "F3 → G5, all white keys", "Tríades maiores": "Major triads", "Fundamental + 3ª maior + 5ª": "Root + major 3rd + 5th", "Tríades menores": "Minor triads", "3ª menor: o acorde \"triste\"": "Minor 3rd: the \"sad\" chord", "Maior ou menor?": "Major or minor?", "Compare lado a lado": "Compare side by side", "Dó maior em 3 posições": "C major in 3 positions", "Fundamental · 1ª · 2ª": "Root · 1st · 2nd", "Sol e Fá em 3 posições": "G and F in 3 positions", "Pratique a mudança de posição": "Practice changing position", "I – IV – V – I": "I – IV – V – I", "Movimento mínimo da mão": "Minimal hand movement", "Campo completo": "All the chords", "I ii iii IV V vi": "I ii iii IV V vi", "O Dó é sempre a tecla branca logo à esquerda de um grupo de 2 teclas pretas. O FM-1 começa em Fá e tem 2 Dós: Dó4 e Dó5. São suas âncoras.": "C is always the white key just left of a group of 2 black keys. The FM-1 starts on F and has 2 Cs: C4 and C5. They are your anchors.", "As pretas aparecem em grupos de 2 e de 3. Decore esse padrão: ele diz em que parte do teclado você está sem olhar os nomes.": "The black keys come in groups of 2 and 3. Learn this pattern: it tells you where you are on the keyboard without looking at the names.", "Sete notas brancas se repetem: Dó Ré Mi Fá Sol Lá Si. Mi→Fá não tem preta no meio (semitom).": "Seven white notes repeat: C D E F G A B. E→F has no black key between them (a half step).", "A escala maior usa só as teclas brancas a partir do Dó. Sinta a posição da mão: polegar no Dó.": "The major scale uses only the white keys starting on C. Feel the hand position: thumb on C.", "Agora desça. Seus dedos já conhecem o caminho — confie na posição, não nos nomes.": "Now go down. Your fingers already know the way — trust the position, not the names.", "Percorra as duas oitavas. Repare nos Dós como marcos a cada 7 teclas brancas.": "Go through both octaves. Notice the Cs as landmarks every 7 white keys.", "Acorde maior = fundamental, +4 semitons, +7 semitons. Toque as 3 teclas ao mesmo tempo. A roxa pisca mais rápido: é a fundamental.": "Major chord = root, +4 half steps, +7 half steps. Play the 3 keys at the same time. The purple one blinks faster: it's the root.", "Acorde menor = fundamental, +3 semitons, +7. A terça fica uma tecla mais perto da fundamental.": "Minor chord = root, +3 half steps, +7. The third is one key closer to the root.", "Mesma fundamental, terça diferente. Procure a tecla que muda de lugar.": "Same root, different third. Look for the key that moves.", "Inverter é trocar qual nota fica embaixo. Mesmas teclas-nome, mão em outra posição. A mão quase não se mexe.": "Inverting means changing which note is at the bottom. Same note names, the hand in another position. The hand barely moves.", "Aplique a mesma ideia em Sol maior e Fá maior.": "Apply the same idea to G major and F major.", "A progressão mais usada da música. Com inversões, a mão fica parada e só alguns dedos mudam.": "The most used progression in music. With inversions, the hand stays put and only a few fingers move.", "Os 6 acordes principais de Dó maior, em ordem. Maiores: I, IV, V. Menores: ii, iii, vi.": "The 6 main chords of C major, in order. Major: I, IV, V. Minor: ii, iii, vi.", "Dó4: esquerda do 1º grupo de 2 pretas, perto do meio.": "C4: left of the 1st group of 2 black keys, near the middle.", "Dó5: esquerda do 2º grupo de 2 pretas.": "C5: left of the 2nd group of 2 black keys.", "1ª preta do grupo de 3 (Fá♯), logo no começo.": "1st black key of the group of 3 (F♯), right at the start.", "2ª preta do grupo de 3 (Sol♯).": "2nd black key of the group of 3 (G♯).", "3ª preta do grupo de 3 (Lá♯).": "3rd black key of the group of 3 (A♯).", "1ª preta do grupo de 2 (Dó♯).": "1st black key of the group of 2 (C♯).", "2ª preta do grupo de 2 (Ré♯).": "2nd black key of the group of 2 (D♯).", "De novo: grupo de 3, 1ª preta.": "Again: group of 3, 1st black key.", "Grupo de 2, 1ª preta.": "Group of 2, 1st black key.", "A última preta, sozinha na ponta (Fá♯).": "The last black key, alone at the end (F♯).", "Fá3: a tecla branca mais à esquerda, antes do 1º grupo de 3 pretas.": "F3: the leftmost white key, before the 1st group of 3 black keys.", "Mi: logo antes do grupo de 3 pretas.": "E: just before the group of 3 black keys.", "Fá: sem preta entre Mi e Fá!": "F: no black key between E and F!", "Si: sem preta entre Si e Dó.": "B: no black key between B and C.", "Dó4: a escala de Dó passa por aqui.": "C4: the C scale goes through here.", "Semitom: Mi→Fá.": "Half step: E→F.", "Semitom: Si→Dó. Oitava completa!": "Half step: B→C. Full octave!", "Dó5: terminou a oitava.": "C5: the octave is done.", "Dó5: mais uma oitava.": "C5: one more octave.", "Sol5: a última tecla.": "G5: the last key.", "Dó maior: Dó–Mi–Sol, teclas brancas alternadas.": "C major: C–E–G, every other white key.", "Fá maior: Fá–Lá–Dó.": "F major: F–A–C.", "Sol maior: Sol–Si–Ré.": "G major: G–B–D.", "Lá menor: Lá–Dó–Mi.": "A minor: A–C–E.", "Ré menor: Ré–Fá–Lá.": "D minor: D–F–A.", "Mi menor: Mi–Sol–Si.": "E minor: E–G–B.", "Dó maior, fundamental.": "C major, root position.", "Dó menor: a terça vira preta (Mi♭).": "C minor: the third turns black (E♭).", "Fá menor: Lá♭.": "F minor: A♭.", "Sol menor: Si♭ no lugar do Si.": "G minor: B♭ instead of B.", "Posição fundamental: Dó–Mi–Sol.": "Root position: C–E–G.", "1ª inversão: Mi–Sol–Dó. O Dó sobe.": "1st inversion: E–G–C. The C goes up.", "2ª inversão: Sol–Dó–Mi.": "2nd inversion: G–C–E.", "Dó maior uma oitava acima.": "C major one octave up.", "Sol maior em 1ª inversão: Si–Ré–Sol.": "G major in 1st inversion: B–D–G.", "Fá maior em 2ª inversão: Dó–Fá–Lá. O Dó fica!": "F major in 2nd inversion: C–F–A. The C stays!", "Resolve no Dó maior.": "Resolves to C major.", "Forma da música": "Song form", "Escolha a seção": "Choose the section", "Modo de treino": "Practice mode", "Guiado": "Guided", "Memória": "Memory", "Parte da música": "Part of the song", "A tecla continua piscando até você acertar.": "The key keeps blinking until you get it right.", "A tecla pisca só um instante: depois toque de memória. Duas falhas mostram a dica.": "The key blinks only for a moment: then play from memory. Two misses show the hint.", "Escutar Acordes": "Listen to Chords", "Praticar Acordes": "Practice Chords", "Escutar Notas": "Listen to Notes", "Praticar Notas": "Practice Notes", "Parar": "Stop", "todas as seções, em ordem": "every section, in order", "1 Observe": "1 Watch", "2 Toque": "2 Play", "3 Confira": "3 Check", "Ouvir": "Listen", "Mostrar de novo": "Show again", "Observe a tecla piscando…": "Watch the blinking key…", "Sua vez: toque a tecla que pisca.": "Your turn: play the blinking key.", "Sua vez: toque as teclas do acorde.": "Your turn: play the chord's keys.", "Certo de primeira!": "Right the first time!", "Certo!": "Right!", "Resultado": "Result", "Repetir": "Repeat", "Tentar de memória": "Try from memory", "Seções": "Sections", "Catálogo": "Catalog", "Menu": "Menu", "Modo computador: a fileira de baixo (": "Computer mode: the bottom row (", ") toca Fá3–Lá4 e a de cima (": ") plays F3–A4 and the top row (", ") toca Lá4–Sol5. As pretas ficam na fileira acima de cada uma. Acorde: segure as teclas juntas, ou clique nas teclas da tela uma a uma (elas ficam presas até o próximo passo; clique de novo para soltar).": ") plays A4–G5. The black keys are on the row above each one. Chord: hold the keys together, or click the keys on screen one by one (they stay down until the next step; click again to let go).", "LEDs desligados: o app não manda nada ao FM-1.": "LEDs off: the app sends nothing to the FM-1.", "Luzes guia ligadas: as teclas do passo acendem no FM-1.": "Guide lights on: the step's keys light up on the FM-1.", "LEDs numa porta que não é o FM1 Pocket Tutor: se ela tocar notas em vez de acender luzes, volte para \"— nenhuma —\".": "LEDs on a port that isn't the FM1 Pocket Tutor: if it plays notes instead of lighting keys, go back to \"— none —\".", "Calibrar: toque a tecla mais grave (a da esquerda) do FM-1.": "Calibrate: play the FM-1's lowest key (the leftmost).", "Conecte o FM-1 primeiro.": "Connect the FM-1 first.", "Este navegador não tem Web MIDI. O Safari não conecta: abra esta página no Chrome ou no Edge.": "This browser has no Web MIDI. Safari can't connect: open this page in Chrome or Edge.", "Nenhuma entrada MIDI. Ligue o FM-1 pelo cabo USB de dados e espere aparecer aqui.": "No MIDI input. Connect the FM-1 with a USB data cable and wait for it to show up here.", "O navegador negou o acesso MIDI. Permita MIDI para esta página (cadeado na barra de endereço) e tente de novo.": "The browser denied MIDI access. Allow MIDI for this page (the lock in the address bar) and try again.", "Para testar, escolha o FM1 Pocket Tutor em \"LEDs\".": "To test, choose the FM1 Pocket Tutor under \"LEDs\".", "Pedindo permissão de MIDI ao navegador…": "Asking the browser for MIDI permission…", "Testando: as teclas do FM-1 acendem da esquerda (Fá3) para a direita (Sol5).": "Testing: the FM-1's keys light up from left (F3) to right (G5).", "Testando: as teclas do FM-1 acendem da esquerda (Fá3) para a direita (Sol5). Esta porta não é o FM1 Pocket Tutor: outros firmwares podem tocar notas em vez de acender.": "Testing: the FM-1's keys light up from left (F3) to right (G5). This port isn't the FM1 Pocket Tutor: other firmwares may play notes instead of lighting up.", "Idioma": "Language", "Instalar módulo de músicas (.json)": "Install song module (.json)", "Ajuda": "Help", "Fechar": "Close", "Este navegador não tem Web MIDI.": "This browser has no Web MIDI.", "Como usar": "How to use", "Cores do teclado": "Keyboard colors"}, "es": {"FM1 Pocket Tutor · aulas": "FM1 Pocket Tutor · clases", "Som": "Sonido", "Nomes": "Nombres", "LED 1 cor": "LED 1 color", "Computador": "Computadora", "‹ Voltar": "‹ Volver", "Voltar": "Volver", "Entrada": "Entrada", "LEDs": "LEDs", "Calibrar": "Calibrar", "Testar LEDs": "Probar LEDs", "Desconectar": "Desconectar", "— nenhuma —": "— ninguna —", "Conectar o FM-1 por MIDI (Chrome ou Edge)": "Conectar el FM-1 por MIDI (Chrome o Edge)", "Luzes guia: notas no canal 16 para o firmware FM1 Pocket Tutor. Em outros firmwares, deixe em — nenhuma —": "Luces guía: notas en el canal 16 para el firmware FM1 Pocket Tutor. Con otros firmwares, déjalo en — ninguna —", "Teclado virtual do FM-1, 27 teclas, Fá3 a Sol5": "Teclado virtual del FM-1, 27 teclas, Fa3 a Sol5", "Tocar com o teclado do computador e montar acordes com o mouse": "Tocar con el teclado de la computadora y armar acordes con el ratón", "Dica: gire o celular para a horizontal — o teclado fica do tamanho do FM-1.": "Consejo: gira el celular en horizontal — el teclado queda del tamaño del FM-1.", "Protótipo sem FM-1 conectado.": "Prototipo sin FM-1 conectado.", "O teclado de baixo faz o papel do FM-1 (27 teclas, Fá3–Sol5). Toque nele livremente ou escolha uma aula.": "El teclado de abajo hace de FM-1 (27 teclas, Fa3–Sol5). Tócalo libremente o elige una clase.", "pisca: toque esta": "parpadea: toca esta", "fundamental": "fundamental", "certo": "correcto", "errado": "incorrecto", "No FM-1 real os LEDs têm uma cor só (use \"LED 1 cor\").": "En el FM-1 real los LEDs tienen un solo color (usa \"LED 1 color\").", "FM-1:": "FM-1:", "ligue pelo cabo USB (ou MIDI) e toque em": "conéctalo con el cable USB (o MIDI) y toca", "lá em cima. Só funciona no": "arriba. Solo funciona en", "ou no Edge: o Safari não tem Web MIDI.": "o Edge: Safari no tiene Web MIDI.", "Sem o FM-1:": "Sin el FM-1:", "ligue": "activa", "para tocar com o teclado do computador e montar acordes clicando.": "para tocar con el teclado de la computadora y armar acordes con clics.", "novo": "nuevo", "Abrir catálogo": "Abrir catálogo", "Abrir minhas músicas": "Abrir mis canciones", "Importar cifra": "Importar cifrado", "Importar cifra (ChordPro)": "Importar cifrado (ChordPro)", "Apagar minhas músicas": "Borrar mis canciones", ".cho, .pro ou .md no formato do template: só os acordes de cada seção ficam guardados.": ".cho, .pro o .md en el formato de la plantilla: solo se guardan los acordes de cada sección.", "Buscar música ou artista": "Buscar canción o artista", "Nenhuma música encontrada.": "Ninguna canción encontrada.", "1 · Geografia do teclado": "1 · Geografía del teclado", "Memória espacial: onde cada tecla mora": "Memoria espacial: dónde vive cada tecla", "2 · Escala de Dó maior": "2 · Escala de Do mayor", "Tom, tom, semitom, tom, tom, tom, semitom": "Tono, tono, semitono, tono, tono, tono, semitono", "3 · Acordes (tríades)": "3 · Acordes (tríadas)", "Três notas juntas, em bloco": "Tres notas juntas, en bloque", "4 · Inversões": "4 · Inversiones", "Mesmas notas, outra ordem": "Mismas notas, otro orden", "5 · Campo harmônico de Dó": "5 · Campo armónico de Do", "Os acordes que vivem juntos na tonalidade": "Los acordes que viven juntos en la tonalidad", "6 · Catálogo · Bloco 1: Fundamentos": "6 · Catálogo · Bloque 1: Fundamentos", "Tríades básicas, 3 a 4 acordes, pulso constante (só os acordes)": "Tríadas básicas, 3 a 4 acordes, pulso constante (solo los acordes)", "7 · Minhas músicas": "7 · Mis canciones", "Cifras importadas (ChordPro): só os acordes de cada seção": "Cifrados importados (ChordPro): solo los acordes de cada sección", "Ache os Dós": "Encuentra los Do", "2 âncoras do teclado": "2 anclas del teclado", "Grupos de 2 e 3 pretas": "Grupos de 2 y 3 negras", "O mapa visual do piano": "El mapa visual del piano", "Brancas: Dó a Si": "Blancas: Do a Si", "As 7 notas naturais": "Las 7 notas naturales", "Subindo uma oitava": "Subiendo una octava", "Dó4 → Dó5": "Do4 → Do5", "Descendo uma oitava": "Bajando una octava", "Dó5 → Dó4": "Do5 → Do4", "Teclado inteiro": "Teclado completo", "Fá3 → Sol5, todas as brancas": "Fa3 → Sol5, todas las blancas", "Tríades maiores": "Tríadas mayores", "Fundamental + 3ª maior + 5ª": "Fundamental + 3ª mayor + 5ª", "Tríades menores": "Tríadas menores", "3ª menor: o acorde \"triste\"": "3ª menor: el acorde \"triste\"", "Maior ou menor?": "¿Mayor o menor?", "Compare lado a lado": "Compara lado a lado", "Dó maior em 3 posições": "Do mayor en 3 posiciones", "Fundamental · 1ª · 2ª": "Fundamental · 1ª · 2ª", "Sol e Fá em 3 posições": "Sol y Fa en 3 posiciones", "Pratique a mudança de posição": "Practica el cambio de posición", "I – IV – V – I": "I – IV – V – I", "Movimento mínimo da mão": "Movimiento mínimo de la mano", "Campo completo": "Campo completo", "I ii iii IV V vi": "I ii iii IV V vi", "O Dó é sempre a tecla branca logo à esquerda de um grupo de 2 teclas pretas. O FM-1 começa em Fá e tem 2 Dós: Dó4 e Dó5. São suas âncoras.": "Do es siempre la tecla blanca justo a la izquierda de un grupo de 2 teclas negras. El FM-1 empieza en Fa y tiene 2 Do: Do4 y Do5. Son tus anclas.", "As pretas aparecem em grupos de 2 e de 3. Decore esse padrão: ele diz em que parte do teclado você está sem olhar os nomes.": "Las negras aparecen en grupos de 2 y de 3. Memoriza ese patrón: te dice en qué parte del teclado estás sin mirar los nombres.", "Sete notas brancas se repetem: Dó Ré Mi Fá Sol Lá Si. Mi→Fá não tem preta no meio (semitom).": "Siete notas blancas se repiten: Do Re Mi Fa Sol La Si. Mi→Fa no tiene negra en medio (semitono).", "A escala maior usa só as teclas brancas a partir do Dó. Sinta a posição da mão: polegar no Dó.": "La escala mayor usa solo las teclas blancas a partir de Do. Siente la posición de la mano: pulgar en Do.", "Agora desça. Seus dedos já conhecem o caminho — confie na posição, não nos nomes.": "Ahora baja. Tus dedos ya conocen el camino — confía en la posición, no en los nombres.", "Percorra as duas oitavas. Repare nos Dós como marcos a cada 7 teclas brancas.": "Recorre las dos octavas. Fíjate en los Do como marcas cada 7 teclas blancas.", "Acorde maior = fundamental, +4 semitons, +7 semitons. Toque as 3 teclas ao mesmo tempo. A roxa pisca mais rápido: é a fundamental.": "Acorde mayor = fundamental, +4 semitonos, +7 semitonos. Toca las 3 teclas al mismo tiempo. La morada parpadea más rápido: es la fundamental.", "Acorde menor = fundamental, +3 semitons, +7. A terça fica uma tecla mais perto da fundamental.": "Acorde menor = fundamental, +3 semitonos, +7. La tercera queda una tecla más cerca de la fundamental.", "Mesma fundamental, terça diferente. Procure a tecla que muda de lugar.": "Misma fundamental, tercera distinta. Busca la tecla que cambia de lugar.", "Inverter é trocar qual nota fica embaixo. Mesmas teclas-nome, mão em outra posição. A mão quase não se mexe.": "Invertir es cambiar qué nota queda abajo. Mismos nombres de tecla, la mano en otra posición. La mano casi no se mueve.", "Aplique a mesma ideia em Sol maior e Fá maior.": "Aplica la misma idea en Sol mayor y Fa mayor.", "A progressão mais usada da música. Com inversões, a mão fica parada e só alguns dedos mudam.": "La progresión más usada de la música. Con inversiones, la mano queda quieta y solo cambian algunos dedos.", "Os 6 acordes principais de Dó maior, em ordem. Maiores: I, IV, V. Menores: ii, iii, vi.": "Los 6 acordes principales de Do mayor, en orden. Mayores: I, IV, V. Menores: ii, iii, vi.", "Dó4: esquerda do 1º grupo de 2 pretas, perto do meio.": "Do4: a la izquierda del 1er grupo de 2 negras, cerca del medio.", "Dó5: esquerda do 2º grupo de 2 pretas.": "Do5: a la izquierda del 2º grupo de 2 negras.", "1ª preta do grupo de 3 (Fá♯), logo no começo.": "1ª negra del grupo de 3 (Fa♯), justo al principio.", "2ª preta do grupo de 3 (Sol♯).": "2ª negra del grupo de 3 (Sol♯).", "3ª preta do grupo de 3 (Lá♯).": "3ª negra del grupo de 3 (La♯).", "1ª preta do grupo de 2 (Dó♯).": "1ª negra del grupo de 2 (Do♯).", "2ª preta do grupo de 2 (Ré♯).": "2ª negra del grupo de 2 (Re♯).", "De novo: grupo de 3, 1ª preta.": "Otra vez: grupo de 3, 1ª negra.", "Grupo de 2, 1ª preta.": "Grupo de 2, 1ª negra.", "A última preta, sozinha na ponta (Fá♯).": "La última negra, sola en la punta (Fa♯).", "Fá3: a tecla branca mais à esquerda, antes do 1º grupo de 3 pretas.": "Fa3: la tecla blanca más a la izquierda, antes del 1er grupo de 3 negras.", "Mi: logo antes do grupo de 3 pretas.": "Mi: justo antes del grupo de 3 negras.", "Fá: sem preta entre Mi e Fá!": "Fa: ¡sin negra entre Mi y Fa!", "Si: sem preta entre Si e Dó.": "Si: sin negra entre Si y Do.", "Dó4: a escala de Dó passa por aqui.": "Do4: la escala de Do pasa por aquí.", "Semitom: Mi→Fá.": "Semitono: Mi→Fa.", "Semitom: Si→Dó. Oitava completa!": "Semitono: Si→Do. ¡Octava completa!", "Dó5: terminou a oitava.": "Do5: terminó la octava.", "Dó5: mais uma oitava.": "Do5: una octava más.", "Sol5: a última tecla.": "Sol5: la última tecla.", "Dó maior: Dó–Mi–Sol, teclas brancas alternadas.": "Do mayor: Do–Mi–Sol, teclas blancas alternadas.", "Fá maior: Fá–Lá–Dó.": "Fa mayor: Fa–La–Do.", "Sol maior: Sol–Si–Ré.": "Sol mayor: Sol–Si–Re.", "Lá menor: Lá–Dó–Mi.": "La menor: La–Do–Mi.", "Ré menor: Ré–Fá–Lá.": "Re menor: Re–Fa–La.", "Mi menor: Mi–Sol–Si.": "Mi menor: Mi–Sol–Si.", "Dó maior, fundamental.": "Do mayor, fundamental.", "Dó menor: a terça vira preta (Mi♭).": "Do menor: la tercera se vuelve negra (Mi♭).", "Fá menor: Lá♭.": "Fa menor: La♭.", "Sol menor: Si♭ no lugar do Si.": "Sol menor: Si♭ en lugar de Si.", "Posição fundamental: Dó–Mi–Sol.": "Posición fundamental: Do–Mi–Sol.", "1ª inversão: Mi–Sol–Dó. O Dó sobe.": "1ª inversión: Mi–Sol–Do. El Do sube.", "2ª inversão: Sol–Dó–Mi.": "2ª inversión: Sol–Do–Mi.", "Dó maior uma oitava acima.": "Do mayor una octava arriba.", "Sol maior em 1ª inversão: Si–Ré–Sol.": "Sol mayor en 1ª inversión: Si–Re–Sol.", "Fá maior em 2ª inversão: Dó–Fá–Lá. O Dó fica!": "Fa mayor en 2ª inversión: Do–Fa–La. ¡El Do se queda!", "Resolve no Dó maior.": "Resuelve en Do mayor.", "Forma da música": "Forma de la canción", "Escolha a seção": "Elige la sección", "Modo de treino": "Modo de práctica", "Guiado": "Guiado", "Memória": "Memoria", "Parte da música": "Parte de la canción", "A tecla continua piscando até você acertar.": "La tecla sigue parpadeando hasta que aciertes.", "A tecla pisca só um instante: depois toque de memória. Duas falhas mostram a dica.": "La tecla parpadea solo un instante: luego toca de memoria. Dos fallos muestran la pista.", "Escutar Acordes": "Escuchar Acordes", "Praticar Acordes": "Practicar Acordes", "Escutar Notas": "Escuchar Notas", "Praticar Notas": "Practicar Notas", "Parar": "Parar", "todas as seções, em ordem": "todas las secciones, en orden", "1 Observe": "1 Observa", "2 Toque": "2 Toca", "3 Confira": "3 Revisa", "Ouvir": "Escuchar", "Mostrar de novo": "Mostrar de nuevo", "Observe a tecla piscando…": "Observa la tecla que parpadea…", "Sua vez: toque a tecla que pisca.": "Tu turno: toca la tecla que parpadea.", "Sua vez: toque as teclas do acorde.": "Tu turno: toca las teclas del acorde.", "Certo de primeira!": "¡Correcto a la primera!", "Certo!": "¡Correcto!", "Resultado": "Resultado", "Repetir": "Repetir", "Tentar de memória": "Intentar de memoria", "Seções": "Secciones", "Catálogo": "Catálogo", "Menu": "Menú", "Modo computador: a fileira de baixo (": "Modo computadora: la fila de abajo (", ") toca Fá3–Lá4 e a de cima (": ") toca Fa3–La4 y la de arriba (", ") toca Lá4–Sol5. As pretas ficam na fileira acima de cada uma. Acorde: segure as teclas juntas, ou clique nas teclas da tela uma a uma (elas ficam presas até o próximo passo; clique de novo para soltar).": ") toca La4–Sol5. Las negras están en la fila de arriba de cada una. Acorde: mantén las teclas juntas, o haz clic en las teclas de la pantalla una a una (quedan presionadas hasta el siguiente paso; vuelve a hacer clic para soltar).", "LEDs desligados: o app não manda nada ao FM-1.": "LEDs apagados: la app no envía nada al FM-1.", "Luzes guia ligadas: as teclas do passo acendem no FM-1.": "Luces guía encendidas: las teclas del paso se encienden en el FM-1.", "LEDs numa porta que não é o FM1 Pocket Tutor: se ela tocar notas em vez de acender luzes, volte para \"— nenhuma —\".": "LEDs en un puerto que no es el FM1 Pocket Tutor: si toca notas en lugar de encender luces, vuelve a \"— ninguna —\".", "Calibrar: toque a tecla mais grave (a da esquerda) do FM-1.": "Calibrar: toca la tecla más grave (la de la izquierda) del FM-1.", "Conecte o FM-1 primeiro.": "Conecta el FM-1 primero.", "Este navegador não tem Web MIDI. O Safari não conecta: abra esta página no Chrome ou no Edge.": "Este navegador no tiene Web MIDI. Safari no conecta: abre esta página en Chrome o Edge.", "Nenhuma entrada MIDI. Ligue o FM-1 pelo cabo USB de dados e espere aparecer aqui.": "Ninguna entrada MIDI. Conecta el FM-1 con el cable USB de datos y espera a que aparezca aquí.", "O navegador negou o acesso MIDI. Permita MIDI para esta página (cadeado na barra de endereço) e tente de novo.": "El navegador negó el acceso MIDI. Permite MIDI para esta página (el candado en la barra de direcciones) e inténtalo de nuevo.", "Para testar, escolha o FM1 Pocket Tutor em \"LEDs\".": "Para probar, elige el FM1 Pocket Tutor en \"LEDs\".", "Pedindo permissão de MIDI ao navegador…": "Pidiendo permiso de MIDI al navegador…", "Testando: as teclas do FM-1 acendem da esquerda (Fá3) para a direita (Sol5).": "Probando: las teclas del FM-1 se encienden de izquierda (Fa3) a derecha (Sol5).", "Testando: as teclas do FM-1 acendem da esquerda (Fá3) para a direita (Sol5). Esta porta não é o FM1 Pocket Tutor: outros firmwares podem tocar notas em vez de acender.": "Probando: las teclas del FM-1 se encienden de izquierda (Fa3) a derecha (Sol5). Este puerto no es el FM1 Pocket Tutor: otros firmwares pueden tocar notas en lugar de encenderse.", "Idioma": "Idioma", "Instalar módulo de músicas (.json)": "Instalar módulo de canciones (.json)", "Ajuda": "Ayuda", "Fechar": "Cerrar", "Este navegador não tem Web MIDI.": "Este navegador no tiene Web MIDI.", "Como usar": "Cómo usar", "Cores do teclado": "Colores del teclado"}}, "rules": [["^(\\d\\.\\d) · (.+)$", "$1 · $T2", "$1 · $T2"], ["^(\\d\\.\\d) (.+)$", "$1 $T2", "$1 $T2"], ["^(.+) ·$", "$T1 ·", "$T1 ·"], ["^Próxima: (.+)$", "Next: $T1", "Siguiente: $T1"], ["^Próxima parte: (.+)$", "Next section: $T1", "Siguiente sección: $T1"], ["^(.+) \\((.+)\\), tom de (\\S+)\\. Progressão: (.+) \\(aparece duas vezes\\)\\. Toque cada acorde em bloco, as teclas juntas; a roxa é a fundamental\\.$", "$1 ($2), key of $3. Progression: $4 (played twice). Play each chord as a block, keys together; the purple one is the root.", "$1 ($2), tono de $3. Progresión: $4 (aparece dos veces). Toca cada acorde en bloque, las teclas juntas; la morada es la fundamental."], ["^(.+) \\((.+)\\), tom de (\\S+)\\. Forma: (.+)\\. Toque cada acorde em bloco, as teclas juntas; a roxa é a fundamental\\.$", "$1 ($2), key of $3. Form: $S4. Play each chord as a block, keys together; the purple one is the root.", "$1 ($2), tono de $3. Forma: $S4. Toca cada acorde en bloque, las teclas juntas; la morada es la fundamental."], ["^(\\d+)% de acertos de primeira$", "$1% right the first time", "$1% de aciertos a la primera"], ["^(\\d+) erro\\(s\\) · (\\d+) dica\\(s\\) · (\\d+)s · modo (Guiado|Memória)$", "$1 mistake(s) · $2 hint(s) · $3s · $T4 mode", "$1 error(es) · $2 pista(s) · $3s · modo $T4"], ["^Passo (\\d+) de (\\d+)$", "Step $1 of $2", "Paso $1 de $2"], ["^Agora de memória: onde fica (.+)\\?$", "Now from memory: where is $1?", "Ahora de memoria: ¿dónde está $1?"], ["^Sua vez: toque (as teclas do acorde|a tecla que pisca)\\. \\(O FM-1 está desconectado: toque em FM-1 lá em cima\\.\\)$", "Your turn: play the keys. (The FM-1 is disconnected: tap FM-1 up top.)", "Tu turno: toca las teclas. (El FM-1 está desconectado: toca FM-1 arriba.)"], ["^Você tocou (\\S+)\\. O alvo (.+) está (\\d+) semitons? para a (direita|esquerda)\\.$", "You played $1. The target $2 is $3 half step(s) to the $D4.", "Tocaste $1. El objetivo $2 está $3 semitono(s) a la $D4."], ["^Nota fora do acorde: (\\S+)\\. Procure (.+)\\.$", "Note outside the chord: $1. Look for $2.", "Nota fuera del acorde: $1. Busca $2."], ["^Solte a tecla extra: (.+)\\.$", "Let go of the extra key: $1.", "Suelta la tecla extra: $1."], ["^(\\d+) músicas? · (\\d+) com estrelas$", "$1 song(s) · $2 with stars", "$1 canción(es) · $2 con estrellas"], ["^(\\d+) de 3 estrelas$", "$1 of 3 stars", "$1 de 3 estrellas"], ["^A oitava do FM-1 mudou \\(OCT(.)\\): ajustei sozinho em (\\S+) oitavas?\\.$", "The FM-1's octave changed (OCT$1): I adjusted by $2 octave(s) on my own.", "La octava del FM-1 cambió (OCT$1): ajusté sola en $2 octava(s)."], ["^Alinhado: a tecla mais grave do FM-1 envia a nota (\\d+) \\((\\S+)\\) e agora vale Fá3\\. Pode tocar\\.$", "Aligned: the FM-1's lowest key sends note $1 ($2) and now counts as F3. You can play.", "Alineado: la tecla más grave del FM-1 envía la nota $1 ($2) y ahora vale Fa3. Puedes tocar."], ["^Conectado: (.+)\\. Para alinhar, toque a tecla mais grave do FM-1 \\(o Fá da ponta esquerda\\)\\.$", "Connected: $1. To align, play the FM-1's lowest key (the F on the far left).", "Conectado: $1. Para alinear, toca la tecla más grave del FM-1 (el Fa de la punta izquierda)."], ["^Conectado: (.+)\\. Toque uma tecla para testar\\.$", "Connected: $1. Play a key to test.", "Conectado: $1. Toca una tecla para probar."], ["^Nota (\\d+) fora das 27 teclas\\. Use Calibrar e toque a tecla mais grave do FM-1\\.$", "Note $1 is outside the 27 keys. Use Calibrate and play the FM-1's lowest key.", "Nota $1 fuera de las 27 teclas. Usa Calibrar y toca la tecla más grave del FM-1."], ["^Importada: (.+) · (\\d+) parte\\(s\\): (.+)$", "Imported: $1 · $2 section(s): $S3", "Importada: $1 · $2 sección(es): $S3"], ["^Não consegui ler essa cifra: (.+)$", "I couldn't read this chord sheet: $1", "No pude leer este cifrado: $1"], ["^músicas? · (\\d+) com estrelas$", "songs · $1 with stars", "canciones · $1 con estrellas"], ["^Importadas (\\d+) cifras?: (.+)$", "Imported $1 chord sheet(s): $S2", "Importados $1 cifrado(s): $S2"], ["^Não consegui ler: (.+)$", "I couldn't read: $1", "No pude leer: $1"], ["^Módulo instalado: (.+) · (\\d+) músicas?\\.$", "Module installed: $1 · $2 song(s).", "Módulo instalado: $1 · $2 canción(es)."], ["^(\\d+) · Minhas músicas$", "$1 · My songs", "$1 · Mis canciones"]], "words": [["Progressão principal", "Main progression", "Progresión principal"], ["Música inteira", "Whole song", "Canción completa"], ["Estrofe (\\d+)", "Verse $1", "Estrofa $1"], ["\\bEstrofe\\b", "Verse", "Estrofa"], ["Refrão", "Chorus", "Estribillo"], ["Clímax", "Climax", "Clímax"], ["Pré-refrão", "Pre-chorus", "Pre-estribillo"], ["\\bPonte\\b", "Bridge", "Puente"], ["Introdução", "Intro", "Introducción"], ["\\bParte (\\d+)", "Part $1", "Parte $1"], ["\\bFim\\b", "End", "Final"], [" · acorde (\\d+) de (\\d+): ", " · chord $1 of $2: ", " · acorde $1 de $2: "], ["(\\d+) acordes\\b", "$1 chords", "$1 acordes"], ["(\\d+) passos\\b", "$1 steps", "$1 pasos"], ["(\\d+) partes\\b", "$1 sections", "$1 secciones"], ["(\\d+) parte\\b", "$1 section", "$1 sección"], ["· tom ", "· key ", "· tono "], [" · Guiado$", " · Guided", " · Guiado"], [" · Memória$", " · Memory", " · Memoria"], ["Dó maior", "C major", "Do mayor"], ["Dó menor", "C minor", "Do menor"], ["Fá maior", "F major", "Fa mayor"], ["Fá menor", "F minor", "Fa menor"], ["Sol maior", "G major", "Sol mayor"], ["Sol menor", "G minor", "Sol menor"], ["Lá menor", "A minor", "La menor"], ["Ré menor", "D minor", "Re menor"], ["Mi menor", "E minor", "Mi menor"], ["1ª inversão", "1st inversion", "1ª inversión"], ["2ª inversão", "2nd inversion", "2ª inversión"]]};
+Object.assign(L10N.dict.en,{"Timbre": "Voice", "Timbre do FM-1": "FM-1 voice", "Escolher o timbre do FM-1": "Choose the FM-1 voice", "Teclas": "Keys", "Pads e cordas": "Pads and strings", "Sopros": "Winds", "Percussão": "Percussion", "Baixos e solos": "Basses and leads", "Outros": "Other", "uma nota por vez": "one note at a time", "Toque num timbre: o FM-1 troca na hora e toca um acorde de Dó.": "Tap a voice: the FM-1 switches at once and plays a C chord.", "Conecte o FM-1 (botão FM-1 lá em cima) para trocar o timbre. A escolha fica guardada e vai para o FM-1 quando ele conectar.": "Connect the FM-1 (FM-1 button up top) to change the voice. Your choice is kept and goes to the FM-1 when it connects."});Object.assign(L10N.dict.es,{"Timbre": "Timbre", "Timbre do FM-1": "Timbre del FM-1", "Escolher o timbre do FM-1": "Elegir el timbre del FM-1", "Teclas": "Teclas", "Pads e cordas": "Pads y cuerdas", "Sopros": "Vientos", "Percussão": "Percusión", "Baixos e solos": "Bajos y solos", "Outros": "Otros", "uma nota por vez": "una nota a la vez", "Toque num timbre: o FM-1 troca na hora e toca um acorde de Dó.": "Toca un timbre: el FM-1 cambia al instante y toca un acorde de Do.", "Conecte o FM-1 (botão FM-1 lá em cima) para trocar o timbre. A escolha fica guardada e vai para o FM-1 quando ele conectar.": "Conecta el FM-1 (botón FM-1 arriba) para cambiar el timbre. La elección queda guardada y va al FM-1 cuando se conecte."});
 let LANG=(()=>{try{const v=localStorage.getItem('fm1lang');if(['pt','en','es'].includes(v))return v}catch(e){}const n=(navigator.language||'pt').slice(0,2).toLowerCase();return n==='pt'?'pt':n==='es'?'es':'en'})();
 document.documentElement.lang=LANG==='pt'?'pt-BR':LANG;
 const L_RULES=L10N.rules.map(([r,en,es])=>[new RegExp(r,'u'),{en,es}]);
@@ -582,6 +637,45 @@ function packMod(p,n){const name=n+' · '+L_PT(p.name),sub=L_PT(p.sub);
   if(p.sub&&typeof p.sub==='object'){L10N.dict.en[sub]=p.sub.en||sub;L10N.dict.es[sub]=p.sub.es||sub}
   return {id:'p-'+p.id,pack:p.id,name,sub,lessons:p.songs.map((s,i)=>songLesson(n+'.'+(i+1),[s.title,s.artist,s.key,s.sections[0]?s.sections[0][1]:'C',s.sections]))}}
 packList().forEach(p=>MODS.push(packMod(p,MODS.length+1)));
+
+/* ============ T71: músicas com melodia (formato fm1pt-song: tudo em tempos) ============
+   A prática da T69 no web app: cada música com melodia pode ser praticada em MIDI (padrão), Acordes ou Notas.
+   Brilha brilha vem embutida (domínio público); um .mid aberto aqui vira uma música e fica no navegador (fm1midi). */
+function brilhaSong(){let t=0;const melody=BRILHA.melody.map(([n,d])=>{const r=[n,t,d];t+=d;return r});t=0;const chords=BRILHA.chords.map(([c,d])=>{const r=[c,t,d];t+=d;return r});
+  return {id:'brilha',title:BRILHA.title,artist:'Tradicional',key:'C',bpm:BRILHA.tempo,time:BRILHA.time,melody,chords,
+    phrases:BRILHA.phrases.map(([name,from,to])=>({name,from,to})),sections:[{name:'Parte A',from:0,to:16},{name:'Parte B',from:16,to:32},{name:'Parte C',from:32,to:48}]}}
+let MELS=[];try{MELS=JSON.parse(localStorage.getItem('fm1midi')||'[]')}catch(e){MELS=[]}
+const songEnd=s=>Math.max(1,...s.melody.map(m=>m[1]+m[2]),...s.chords.map(c=>c[1]+c[2]));
+function melLesson(id,s){
+  const flat=/b|^F|^Dm|^Gm|^Cm/.test(s.key||'C'),safe=(c,ex)=>{try{return chord(c,ex,flat)}catch(e){return null}};
+  const secs=(s.sections&&s.sections.length?s.sections:s.phrases).map(x=>({name:x.name,from:x.from,to:x.to}));
+  { const seen={};secs.forEach(x=>{seen[x.name]=(seen[x.name]||0)+1;if(seen[x.name]>1)x.name+=' ('+seen[x.name]+')'}); }   // nome repetido vira outro: a escolha do aluno é sempre de uma seção só
+  const parts=secs.map(x=>({name:x.name,from:x.from,to:x.to,steps:s.chords.filter(c=>c[1]>=x.from&&c[1]<x.to).map((c,i,a)=>safe(c[0],x.name+' · acorde '+(i+1)+' de '+a.length+': '+c[0])).filter(Boolean)}));
+  if(parts.length>1)parts.push({name:'Música inteira',from:0,to:songEnd(s),steps:parts.flatMap(p=>p.steps)});
+  return {id,title:s.title,sub:(s.artist||'MIDI')+' · tom '+(s.key||'C')+' · '+s.time.join('/')+' · original '+s.bpm+' BPM'+(secs.length>1?' · '+secs.length+' partes':'')+' · '+s.phrases.length+' frase'+(s.phrases.length===1?'':'s'),obs:1200,demo:true,song:true,fm:s,parts,steps:parts[0].steps,
+    intro:'Melodia, acordes e frases. Escolha como praticar: MIDI (a melodia no tempo, o padrão), Acordes ou Notas.'}}
+const melMod={id:'mel',name:(MODS.length+1)+' · Músicas com melodia',sub:'Melodia, acordes e frases: pratique em MIDI, Acordes ou Notas',lessons:[]};
+function rebuildMel(){const n=melMod.name.split(' ')[0];melMod.lessons=[brilhaSong(),...MELS].map((s,i)=>melLesson(n+'.'+(i+1),s))}
+rebuildMel();MODS.push(melMod);
+/* um .mid vira música: a faixa mais aguda é a melodia (na oitava que cabe nas 27 teclas), os acordes saem das outras faixas,
+   tempo a tempo, e as frases dos marcadores (sem marcadores: uma frase a cada 2 compassos) */
+function midiSong(m,name){
+  const tr=m.tracks.filter(t=>t.notes.length&&!t.channels.includes(9));if(!tr.length)throw new Error('nenhuma faixa com notas');
+  const avg=t=>t.notes.reduce((a,n)=>a+n.n,0)/t.notes.length,mel=tr.reduce((a,b)=>avg(b)>avg(a)?b:a);
+  const ts=m.timesigs[0]||{num:4,den:4},beat=m.ppq*4/ts.den,bpm=Math.max(30,Math.min(240,Math.round(m.tempos[0]?m.tempos[0].bpm:120)));
+  let notes=mel.notes.map(n=>[n.n,+(n.t/beat).toFixed(3),+(n.d/beat).toFixed(3)]);
+  const lo=Math.min(...notes.map(n=>n[0])),hi=Math.max(...notes.map(n=>n[0]));
+  const sh=[0,-12,12,-24,24].find(x=>lo+x>=LO&&hi+x<=HI);
+  notes=notes.map(n=>{let p=n[0]+(sh??0);while(p<LO)p+=12;while(p>HI)p-=12;return [p,n[1],n[2]]});
+  const end=Math.ceil(Math.max(...notes.map(n=>n[1]+n[2]))),others=tr.filter(t=>t!==mel),chords=[];
+  for(let k=0;k<end;k++){const w=Array(12).fill(0);let bass=null,bl=999;
+    others.forEach(t=>t.notes.forEach(n=>{const a=Math.max(n.t,k*beat),e=Math.min(n.t+n.d,(k+1)*beat);if(e>a){w[n.n%12]+=e-a;if(n.n<bl){bl=n.n;bass=n.n%12}}}));
+    const c=SMF.guessChord(w,bass);if(!c)continue;const r=chords.at(-1);if(r&&r[0]===c&&r[1]+r[2]===k)r[2]++;else chords.push([c,k,1])}
+  let phrases=m.markers.map((mk,i,a)=>({name:mk.text||('Frase '+(i+1)),from:Math.round(mk.tick/beat),to:a[i+1]?Math.round(a[i+1].tick/beat):end}));
+  if(!phrases.length)for(let a=0,i=1;a<end;a+=2*ts.num,i++)phrases.push({name:'Frase '+i,from:a,to:Math.min(end,a+2*ts.num)});
+  const fit=t=>{const ns=t.notes.map(n=>[n.n,+(n.t/beat).toFixed(3),+(n.d/beat).toFixed(3)]),l=Math.min(...ns.map(n=>n[0])),h=Math.max(...ns.map(n=>n[0])),x=[0,-12,12,-24,24].find(v=>l+v>=LO&&h+v<=HI)??0;return ns.map(n=>{let q=n[0]+x;while(q<LO)q+=12;while(q>HI)q-=12;return [q,n[1],n[2]]})};
+  const alts={},tracks=[];m.tracks.forEach((t,i)=>{if(t.notes.length&&!t.channels.includes(9)){alts[i]=t===mel?notes:fit(t);tracks.push({i,name:t.name||('Faixa '+(i+1)),n:t.notes.length})}});
+  return {id:'mid-'+Date.now().toString(36),title:name,artist:'MIDI',key:'C',bpm,time:[ts.num,ts.den],melody:notes,chords,phrases,shift:sh??0,tracks,alts,melTrack:m.tracks.indexOf(mel)}}
 let MINE=[];try{MINE=JSON.parse(localStorage.getItem('fm1songs')||'[]')}catch(e){MINE=[]}
 const MINE_N=MODS.length+1;
 const mineMod={id:'m7',name:MINE_N+' · Minhas músicas',sub:'Cifras importadas (ChordPro): só os acordes de cada seção',lessons:[]};
@@ -598,6 +692,24 @@ function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 const P=load('fm1p',{});
 const CFG=Object.assign({snd:true,mono:false,names:false,mode:'guiado'},load('fm1s',{}));
+/* ============ timbre do FM-1 (T24): o aluno escolhe qualquer voz do FM6; Program Change no canal 1 ============
+   FM6: programa 0 INIT, 1..8 as vozes do Melodee, 9..24 as da ROM (modules/fm6). Sem timbre padrão: a escolha
+   fica guardada (fm1s.voice) e volta ao FM-1 quando a porta conecta. */
+const VOICES=[['Teclas',[[1,'Tine EP'],[9,'Tine EP 2'],[14,'Clavinet'],[7,'Organ'],[15,'Drawbars']]],
+ ['Pads e cordas',[[5,'Pad'],[16,'Strings'],[17,'Glass Pad'],[19,'Harp'],[8,'Pluck']]],
+ ['Sopros',[[4,'Brass'],[10,'Brass Sect'],[21,'Flute']]],
+ ['Percussão',[[2,'Bell'],[12,'Bells'],[6,'Marimba'],[13,'Marimba 2'],[20,'Kalimba'],[22,'Steel Drum'],[24,'Tubular']]],
+ ['Baixos e solos',[[3,'FM Bass',1],[11,'Solid Bass',1],[23,'Saw Bass',1],[18,'Sync Lead',1]]],
+ ['Outros',[[0,'Init']]]];
+const vName=n=>{for(const[,l]of VOICES)for(const v of l)if(v[0]===n)return v[1];return null};
+function voiceLabel(){const e=$('#voiceName');if(e)e.textContent=CFG.voice!=null&&vName(CFG.voice)?vName(CFG.voice):'Timbre'}
+function voiceSend(){if(M.out&&CFG.voice!=null){try{M.out.send([0xC0,CFG.voice&127])}catch(e){}}}
+function voicePreview(){if(!M.out)return;const ns=[60,64,67];try{ns.forEach(n=>M.out.send([0x90,n,90]));setTimeout(()=>{try{ns.forEach(n=>M.out.send([0x80,n,0]))}catch(e){}},700)}catch(e){}}
+function voiceRender(){const b=$('#voice-body');if(!b)return;
+  b.innerHTML=VOICES.map(([cat,l])=>'<h3>'+cat+'</h3><div class="vgrid">'+l.map(([n,nm,mono])=>'<button class="vbtn" data-act="vpick" data-v="'+n+'" aria-pressed="'+(CFG.voice===n)+'">'+nm+'<small>'+(mono?'uma nota por vez':'nº '+n)+'</small></button>').join('')+'</div>').join('');
+  $('#voicemsg').textContent=M.out?'Toque num timbre: o FM-1 troca na hora e toca um acorde de Dó.':'Conecte o FM-1 (botão FM-1 lá em cima) para trocar o timbre. A escolha fica guardada e vai para o FM-1 quando ele conectar.'}
+function voiceOpen(){voiceRender();$('#voicedlg').showModal()}
+function voicePick(n){CFG.voice=n;save('fm1s',CFG);voiceSend();voicePreview();voiceLabel();voiceRender()}
 
 /* ============ áudio (WebAudio, estilo FM) ============ */
 let ac=null,master=null;const voices=new Map();
@@ -631,10 +743,14 @@ function blip(freq,dur,type,vol,when){
 }
 const chime=()=>{blip(880,.18,'sine',.18);blip(1320,.25,'sine',.16,.09)};
 const buzz=()=>blip(110,.2,'triangle',.28);
+// Com o FM-1 conectado, o exemplo toca no próprio FM-1 (canal 1), com o timbre que o aluno escolheu; sem ele, no computador.
 function playDemo(st){
+  const ms=st.t==='c'?800:520;
+  if(M.out){try{st.notes.forEach(n=>M.out.send([0x90,n,90]))}catch(e){}
+    setTimeout(()=>{try{st.notes.forEach(n=>M.out.send([0x80,n,0]))}catch(e){}},ms);return}
   ensureAudio();if(!ac)return;
   st.notes.forEach(n=>{voiceOn(n,'d'+n,.22)});
-  setTimeout(()=>st.notes.forEach(n=>voiceOff('d'+n)),st.t==='c'?800:520);
+  setTimeout(()=>st.notes.forEach(n=>voiceOff('d'+n)),ms);
 }
 
 /* ============ teclado virtual ============ */
@@ -694,7 +810,7 @@ addEventListener('blur',()=>[...held.keys()].forEach(release));
 
 /* ============ estado e motor da lição ============ */
 const S={screen:'home',lesson:null,i:0,phase:'idle',err:0,errs:0,hints:0,first:0,stale:new Set(),t0:0,mode:CFG.mode};
-let T=[];const after=(ms,f)=>{T.push(setTimeout(f,ms))};const clearT=()=>{T.forEach(clearTimeout);T=[];stopHear()};
+let T=[];const after=(ms,f)=>{T.push(setTimeout(f,ms))};const clearT=()=>{T.forEach(clearTimeout);T=[];stopHear();if(typeof pvStop==='function')pvStop()};
 // Escutar Acordes / Escutar Notas: toca a seção escolhida em sequência, com as teclas acesas na tela e no FM-1 (as luzes guia)
 const isChords=L=>(L.parts?L.parts.flatMap(p=>p.steps):L.steps).some(s=>s.t==='c');
 function actRow(L,parts){const c=isChords(L),w=c?'Acordes':'Notas',p=parts.length>1?parts[S.part].name+' · ':'';
@@ -708,7 +824,7 @@ function hear(){if(HEAR){stopHear();return}ensureAudio();const st=S.steps||[],ga
   HEAR.push(setTimeout(stopHear,st.length*gap))}
 const steps=()=>S.steps||S.lesson.steps;
 const step=()=>steps()[S.i];
-function clearKeys(){for(const m in keyEl)keyEl[m].classList.remove('cue','root','ok','bad','next')}
+function clearKeys(){for(const m in keyEl)keyEl[m].classList.remove('cue','root','ok','bad','next','lit')}
 function setCue(st){clearKeys();if(!st)return;st.notes.forEach(n=>keyEl[n].classList.add('cue'));if(st.root!=null)keyEl[st.root].classList.add('root')}
 function showNext(){if(!S.lesson.preview)return;const nx=steps()[S.i+1];if(nx&&!nx.notes.includes(step().notes[0]))keyEl[nx.notes[0]].classList.add('next')}
 function flash(n,c,ms){const e=keyEl[n];e.classList.add(c);after(ms||450,()=>e.classList.remove(c))}
@@ -740,6 +856,7 @@ function hint(auto){
 }
 function onPress(n,slide){
   updateSlots();
+  if(S.screen==='song'&&PV.fmode){if(!slide)pvHit(n);return}
   if(S.screen!=='play'||S.phase!=='do'||slide||S.stale.has(n))return;
   const st=step();
   if(st.notes.includes(n)){checkDone()}
@@ -811,7 +928,7 @@ const bestStars=id=>Math.max(P[id+':guiado']||0,P[id+':memoria']||0);
 function songTile(m){const n=m.lessons.length,done=m.lessons.filter(l=>bestStars(l.id)).length;
   return `<div class="card mod tile"><h2>${m.name}</h2><div class="sub mut">${m.sub}</div>
    <div><span class="big-n">${n}</span> <span class="mut">música${n===1?'':'s'}${n?' · '+done+' com estrelas':''}</span></div>
-   <div class="row">${n?`<button class="pri" data-act="cat:${m.id}">Abrir ${m.id==='m7'?'minhas músicas':'catálogo'}</button>`:''}${m.id==='m7'?'<button class="big" data-act="import">'+IC.imp+'Importar cifra</button>':''}</div></div>`}
+   <div class="row">${n?`<button class="pri" data-act="cat:${m.id}">Abrir ${m.id==='m7'?'minhas músicas':'catálogo'}</button>`:''}${m.id==='m7'?'<button class="big" data-act="import">'+IC.imp+'Importar cifra</button>':''}${m.id==='mel'?'<button class="big" data-act="midimport">'+IC.imp+'Abrir MIDI</button>':''}</div></div>`}
 // 2º nível: a lista de músicas de um módulo, com busca
 function openCatalog(mid){
   const m=MODS.find(x=>x.id===mid);if(!m)return home();
@@ -819,25 +936,159 @@ function openCatalog(mid){
   $('#view').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><div><b style="font-size:18px">${m.name}</b><div class="mut" style="font-size:15px">${m.sub}</div></div>
    <input class="search" id="q" type="search" placeholder="Buscar música ou artista" aria-label="Buscar música ou artista"></div>
    ${mid==='m7'?`<div class="row" style="margin-top:8px"><button class="big" data-act="import">${IC.imp}Importar cifra (ChordPro)</button>${MINE.length?'<button class="big" data-act="unmine">Apagar minhas músicas</button>':''}<span class="mut" style="font-size:15px">.cho, .pro ou .md no formato do template: só os acordes de cada seção ficam guardados.</span></div>`:''}</div>
+   ${mid==='mel'?`<div class="row" style="margin-top:8px"><button class="big" data-act="midimport">${IC.imp}Abrir MIDI (.mid)</button>${MELS.length?'<button class="big" data-act="unmidi">Apagar as músicas MIDI</button>':''}<span class="mut" style="font-size:15px">A faixa mais aguda vira a melodia; os acordes saem das outras faixas. Fica guardado neste navegador.</span></div>`:''}</div>
    <div class="songgrid" id="songs"></div>`;
   const draw=q=>{q=(q||'').toLowerCase();$('#songs').innerHTML=m.lessons.filter(l=>!q||(l.title+' '+l.sub).toLowerCase().includes(q)).map(l=>{const np=l.parts?l.parts.length-(l.parts.length>1?1:0):1;
     return `<button data-act="open:${l.id}"><b>${l.title}</b><small>${l.sub.split(' · tom ')[0]} · tom ${(l.sub.split(' · tom ')[1]||'').split(' · ')[0]} · ${np} ${np===1?'parte':'partes'} · ${stars(l.id)}</small></button>`}).join('')||'<div class="mut">Nenhuma música com esse nome.</div>'};
   draw('');$('#q').addEventListener('input',e=>draw(e.target.value));
 }
-// 3º nível: a página da música — a forma (as seções em ordem) e a escolha da seção
+// 3º nível: a página da música (T71, Figma 58:5270): Como praticar (MIDI · Acordes · Notas), a seção, a velocidade em BPM.
+// À esquerda, o conteúdo da vista; à direita, as escolhas e os botões. Sem melodia, só Acordes fica disponível.
+const PV={song:null,bpm:96,tr:null,fmode:null,fcur:0,fidx:0,done:new Set(),slide:0};
+function fmOf(L){if(L.fm)return L.fm;if(L._fm)return L._fm;
+  const chords=[],phrases=[];let t=0;
+  L.parts.filter(p=>p.name!=='Música inteira').forEach(p=>{const a=t;p.steps.forEach(s=>{chords.push([s.label,t,4]);t+=4});p.from=a;p.to=t;phrases.push({name:p.name,from:a,to:t})});
+  const mi=L.parts.find(p=>p.name==='Música inteira');if(mi){mi.from=0;mi.to=t}
+  return L._fm={title:L.title,bpm:L.bpm||90,time:[4,4],melody:[],chords,phrases}}
+const pvBars=p=>{const s=fmOf(S.lesson),b=s.time[0];return Math.max(1,Math.round(((p.to||songEnd(s))-(p.from||0))/b))};
+const pvRange=()=>{const p=S.lesson.parts[S.part];return [p.from||0,p.to||songEnd(fmOf(S.lesson))]};
+const pvPhrases=()=>{const [a,b]=pvRange();return fmOf(S.lesson).phrases.filter(f=>f.from<b&&f.to>a)};
+const pvView=L=>{const has=fmOf(L).melody.length>0,v=CFG.view||'midi';return has?v:'acordes'};
 function openSong(L){
   const parts=L.parts,secs=parts.length>1?parts.slice(0,-1):parts;S.screen='song';S.mod=(modOf(L)||{}).id;
   $('#back').hidden=false;setTitle(L.title);
+  const s=fmOf(L),has=s.melody.length>0;
+  if(PV.song!==L){PV.song=L;PV.bpm=s.bpm;PV.fcur=0;PV.done=new Set();PV.slide=0}
+  const v=pvView(L),sec=parts[S.part],sn=parts.length>1?' · '+sec.name:'';
+  const VIEWS=[['midi','MIDI','melodia no tempo · padrão'],['acordes','Acordes','compassos e metrônomo'],['frases','Notas','o tutor espera você']];
+  const tg=(k,on,l)=>`<button class="big" aria-pressed="${!!on}" data-act="pvopt:${k}">${l}</button>`;
+  const ph=pvPhrases();if(PV.fcur>=ph.length)PV.fcur=0;const cur=ph[PV.fcur];
+  const modo=`<div class="lbl">Modo de treino</div><div class="row"><button class="big" aria-pressed="${S.mode==='guiado'}" data-act="mode:guiado">Guiado</button><button class="big" aria-pressed="${S.mode==='memoria'}" data-act="mode:memoria">Memória</button></div>`;
+  const optTxt=v==='midi'?[CFG.pvCh!==false?'com acordes':'sem acordes',CFG.pvMet?'metrônomo':''].filter(Boolean).join(', '):v==='acordes'?(CFG.pvMetA!==false?'metrônomo':'sem metrônomo'):'';
+  const selTxt=`<div id="pvSel" class="mut" style="font-size:15px;margin-top:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px"><b style="color:var(--txt)">Selecionado:</b> ${sec.name} · ${pvBars(sec)} compasso${pvBars(sec)===1?'':'s'} · <span id="pvSelBpm">${PV.bpm}</span> BPM${optTxt?' · '+optTxt:''} · ${S.mode==='memoria'?'Memória':'Guiado'}</div>`;
+  const ep=(esc,pra,dis)=>selTxt+`<div class="two" style="margin-top:10px"><button class="pri" id="pvPlay" data-act="${esc}">${IC.snd}Tocar</button><button class="pri" data-act="${pra}"${dis?' disabled':''}>Praticar</button></div>
+    <div class="mut" style="font-size:14px;margin-top:6px">Tocar reproduz o que está escolhido em Escolha a seção; Praticar estuda a mesma parte com o tutor e as luzes do FM-1.</div>`;
+  let opts='';
+  const trk=s.tracks&&s.tracks.length>1&&s.alts?`<label style="display:flex;align-items:center;gap:6px"><span class="mut">Faixa da melodia</span><select id="pvTrk" class="search" style="min-width:0">${s.tracks.map(t=>`<option value="${t.i}"${t.i===s.melTrack?' selected':''}>${String(t.name).replace(/[<&]/g,'')} (${t.n} notas)</option>`).join('')}</select></label>`:'';
+  if(v==='midi')opts=`<div class="lbl">Opções</div><div class="row">${tg('ch',CFG.pvCh!==false,'Com acordes')}${tg('met',CFG.pvMet,'Metrônomo')}${trk}</div>${modo}${ep('pvmidi','pvpmel',false)}`;
+  else if(v==='acordes')opts=`<div class="lbl">Opções</div><div class="row">${tg('metA',CFG.pvMetA!==false,'Metrônomo')}</div>${modo}${ep('pvchords','start',!sec.steps.length)}`;
+  else opts=`${modo}<div class="two" style="margin-top:10px"><button class="big" data-act="pvhear">${IC.snd}Ouvir a frase</button><button class="big" data-act="pvjoin">Juntar frases 1 a ${PV.fcur+1}</button></div>${ep('pvnotes','pvpnotes',false)}`;
   $('#view').innerHTML=`<div class="grid2"><div class="card"><h2 style="margin:0 0 4px;font-size:22px">${L.title}</h2><div class="mut">${L.sub}</div>
     <div style="font-weight:700;margin-top:10px">Forma da música</div>
-    <div class="forma">${secs.map(p=>`<i>${p.name}</i>`).join('<b>→</b>')}</div>
-    <div class="expl">${L.intro}</div></div>
-   <div class="card"><div style="font-weight:700;margin-bottom:6px">Escolha a seção</div>
-    <div class="secs">${parts.map((p,i)=>`<button aria-pressed="${i===S.part}" data-act="part:${i}"><b>${p.name}</b><span class="mut" style="font-size:15px"> · ${p.steps.length} acordes</span><span class="ch">${p.name==='Música inteira'?'todas as seções, em ordem':p.steps.map(x=>x.label).join(' – ')}</span></button>`).join('')}</div>
-    <div style="font-weight:700;margin-bottom:6px">Modo de treino</div>
-    <div class="row" style="margin-bottom:8px"><button class="big" aria-pressed="${S.mode==='guiado'}" data-act="mode:guiado">Guiado</button><button class="big" aria-pressed="${S.mode==='memoria'}" data-act="mode:memoria">Memória</button></div>
-    ${actRow(L,parts)}</div></div>`;
+    <div class="forma">${secs.map((p,i)=>`<i${i===S.part?' style="background:var(--acc);border-color:var(--acc);color:#0f1115"':''}>${p.name}</i>`).join('<b>→</b>')}</div>
+    <div class="expl">${L.intro}</div><div id="pv"></div></div>
+   <div class="card"><div class="lbl">Como praticar</div>
+    <div class="views" role="tablist" aria-label="Como praticar">${VIEWS.map(([k,n,d])=>`<button role="tab" type="button" aria-selected="${k===v}" data-act="pview:${k}"${!has&&k!=='acordes'?' disabled title="Esta música ainda não tem melodia"':''}>${n}<small>${d}</small></button>`).join('')}</div>
+    ${has?'':'<div class="mut" style="font-size:15px;margin-top:6px">Esta música só tem acordes. MIDI e Notas precisam de melodia: abra um .mid em Músicas com melodia.</div>'}
+    <div class="lbl">Escolha a seção</div>
+    <div class="secs">${parts.map((p,i)=>`<button aria-pressed="${i===S.part}" data-act="part:${i}"><b>${p.name}</b><span class="mut" style="font-size:15px"> · ${pvBars(p)} compasso${pvBars(p)===1?'':'s'}</span><span class="ch">${p.name==='Música inteira'?'todas as partes, em ordem':p.steps.map(x=>x.label).filter((c,j,a)=>!j||c!==a[j-1]).join(' – ')}</span></button>`).join('')}</div>
+    <div class="lbl">Velocidade</div>
+    <div class="bpmc"><button class="big" data-act="bpm:m" aria-label="Menos 1 BPM">−</button><input type="number" id="pvBpm" min="30" max="240" step="1" value="${PV.bpm}" aria-label="BPM"${PV.bpm!==s.bpm?' class="mudou"':''}><button class="big" data-act="bpm:p" aria-label="Mais 1 BPM">+</button><span class="u">BPM</span>
+     <input type="range" id="pvBpmR" min="30" max="240" step="1" value="${PV.bpm}" aria-label="BPM (deslizar)"><button class="big" aria-pressed="${PV.bpm===s.bpm}" data-act="bpm:o">Original · ${s.bpm}</button><button class="big" data-act="bpm:t">Bater o tempo</button></div>
+    ${opts}</div></div>`;
+  const setB=x=>{PV.bpm=Math.max(30,Math.min(240,Math.round(+x)||s.bpm));$('#pvBpm').value=PV.bpm;$('#pvBpmR').value=PV.bpm;$('#pvBpm').classList.toggle('mudou',PV.bpm!==s.bpm);const o=document.querySelector('[data-act="bpm:o"]');if(o)o.setAttribute('aria-pressed',String(PV.bpm===s.bpm));const sb=document.getElementById('pvSelBpm');if(sb)sb.textContent=PV.bpm};
+  PV.setB=setB;const tk=document.getElementById('pvTrk');if(tk)tk.addEventListener('change',e=>{const i=+e.target.value;if(s.alts&&s.alts[i]){s.melody=s.alts[i];s.melTrack=i;try{localStorage.setItem('fm1midi',JSON.stringify(MELS))}catch(x){}clearT();openSong(L)}});$('#pvBpm').addEventListener('change',e=>setB(e.target.value));$('#pvBpmR').addEventListener('input',e=>setB(e.target.value));
+  pvRender();
 }
+// o conteúdo da vista, à esquerda
+// o mini teclado do FM-1 (27 teclas): as do acorde em laranja, a fundamental em roxo
+function miniKb(ch){const W=[];for(let m=LO;m<=HI;m++)if(!isBlack(m))W.push(m);const w=100/W.length;
+  let h=W.map(m=>`<i class="${ch.notes.includes(m)?(m===ch.root?'rt':'on'):''}"></i>`).join('');
+  for(let m=LO;m<=HI;m++)if(isBlack(m)){const wi=W.indexOf(m-1);h+=`<b class="${ch.notes.includes(m)?(m===ch.root?'rt':'on'):''}" style="left:${(wi+1)*w-w*.31}%;width:${w*.62}%"></b>`}
+  return `<div class="mk" aria-hidden="true">${h}</div>`}
+const cmapChords=()=>{const seen=new Set();return S.lesson.parts[S.part].steps.filter(c=>!seen.has(c.label)&&seen.add(c.label))};
+// T82: nas vistas MIDI e Notas o mapa mostra NOTAS (o que elas tocam); em Acordes, acordes
+const cmapIsNotes=()=>pvView(S.lesson)!=='acordes'&&fmOf(S.lesson).melody.length>0;
+const noteItem=(n,st)=>({label:nm(n),notes:[n],root:null,sub:'',st,note:true});
+function cmapItems(){if(!cmapIsNotes())return cmapChords();const [a,b]=pvRange(),ms=fmOf(S.lesson).melody.filter(m=>m[1]>=a&&m[1]<b);
+  if(CFG.cmap==='grade'){const seen=new Set();return ms.filter(m=>!seen.has(m[0])&&seen.add(m[0])).sort((x,y)=>x[0]-y[0]).map(m=>noteItem(m[0],m[1]))}
+  return ms.map(m=>noteItem(m[0],m[1]))}
+function cmapHTML(){const cs=cmapItems();if(!cs.length)return'';const isN=cs[0].note;const g=CFG.cmap==='grade';if(PV.slide>=cs.length)PV.slide=0;const c=cs[PV.slide];
+  const head=`<div class="cmh"><div><div style="font-weight:700">${isN?(g?'As '+cs.length+' notas desta seção':'A melodia desta seção, nota a nota ('+cs.length+')'):'Os '+cs.length+' acorde'+(cs.length>1?'s':'')+' desta seção'}</div><div class="mut" style="font-size:14px">${isN?'Estude onde fica cada nota antes de tocar':'Estude onde fica cada um antes de praticar'}</div></div>
+    <div class="views" role="tablist" aria-label="Vista do mapa"><button role="tab" type="button" aria-selected="${!g}" data-act="cmap:slides">Slides</button><button role="tab" type="button" aria-selected="${g}" data-act="cmap:grade">Grade</button></div></div>`;
+  if(!g)return head+`<div class="cslide" role="button" tabindex="0" data-act="cplay:${PV.slide}" title="Tocar ${c.label}" style="cursor:pointer"><div class="cs-h"><b>${c.label}</b><span class="mut">${isN?'nota '+(PV.slide+1)+' de '+cs.length:chordName(c)}</span></div>${miniKb(c)}${c.sub?`<div class="cs-n">${c.sub}</div>`:''}</div>
+    <div class="cnav"><button class="big" data-act="cslide:prev"${PV.slide?'':' disabled'}>‹ Anterior</button><span class="dots">${cs.length<=16?cs.map((x,i)=>`<i class="${i===PV.slide?'on':''}"></i>`).join(''):''} ${PV.slide+1} de ${cs.length} · ${c.label}</span><button class="big" data-act="cslide:next"${PV.slide<cs.length-1?'':' disabled'}>Próximo ›</button></div>`;
+  return head+`<div class="cgrid">${cs.map((x,i)=>`<button type="button" data-act="cplay:${i}" data-cl="${x.label}" title="Tocar ${x.label}"><div class="cg-h"><b>${x.label}</b>${isN?'':`<span class="mut" style="font-size:12px">${chordName(x)}</span>`}</div>${miniKb(x)}${x.sub?`<div class="cg-n">${x.sub}</div>`:''}</button>`).join('')}</div>`}
+function chordName(c){const r=PT[c.root%12]||'';const q=c.label.replace(/^[A-G][#b]?/,'').split('/')[0];
+  return r+(q===''?' maior':/^m(?!aj)/.test(q)?' menor'+(q.length>1?' '+q.slice(1):''):' '+q)}
+function pvRender(){const L=S.lesson,s=fmOf(L),v=pvView(L),[a,b]=pvRange(),box=$('#pv');if(!box)return;const sec=L.parts[S.part];
+  if(v==='midi'){const cs=s.chords.filter(c=>c[1]>=a&&c[1]<b);
+    box.innerHTML=cmapHTML()+`<div class="lbl">Acordes${L.parts.length>1?' · '+sec.name:''}</div><div class="pchips">${cs.map((c,i)=>`<span data-ci="${s.chords.indexOf(c)}">${c[0]}</span>`).join('')||'<span>sem acordes</span>'}</div>
+      <div class="mut" id="pvSt" style="font-size:15px;margin-top:4px"></div><div class="pvnow" id="pvNow">Toque junto: a tecla acesa toca agora; a fraca é a seguinte.</div>`}
+  else if(v==='acordes'){const bt=s.time[0];
+    const grp=L.parts.filter(p=>p.name!=='Música inteira'&&p.from<b&&p.to>a).map(p=>[p.name,Math.max(p.from,a),Math.min(p.to,b)]);if(!grp.length)grp.push([sec.name,a,b]);
+    let h='';grp.forEach(([nmp,ga,gb])=>{const a0=Math.floor(ga/bt)*bt,cells=[];for(let k=a0;k<Math.ceil(gb/bt)*bt;k++){const c=s.chords.find(x=>Math.floor(x[1])===k);cells.push([k,c?c[0]:'·'])}
+      h+=`<div class="lbl" style="margin-top:6px">${nmp}</div><div class="pbars">`;for(let i=0;i<cells.length;i+=bt)h+=`<div class="pbar">${cells.slice(i,i+bt).map(([k,c])=>`<i data-k="${k}"${c==='·'?' class="seg"':''}>${c}</i>`).join('')}</div>`;h+='</div>'});
+    box.innerHTML=cmapHTML()+`<div class="lbl">Compassos (${s.time.join('/')})</div><div class="pbarsbox">${h}</div><div class="mut" id="pvSt" style="font-size:15px;margin-top:4px"></div><div class="pvnow" id="pvNow">Toque o acorde quando ele acender.</div>`}
+  else{const ph=pvPhrases();
+    box.innerHTML=cmapHTML()+`<div class="lbl">Frases</div><div class="pchips">${ph.map((f,i)=>`<button type="button" aria-pressed="${i===PV.fcur}" data-act="pfr:${i}"${PV.done.has(f.name+f.from)?' class="feita"':''}>${f.name}${PV.done.has(f.name+f.from)?' ✓':''}</button>`).join('')}</div>
+      <div class="lbl">Notas${ph[PV.fcur]?' · '+ph[PV.fcur].name:''}</div><div class="pchips" id="pvNotes"></div><div class="pvnow" id="pvNow">Toque Praticar: o tutor espera a tecla certa.</div>`;pvNotes()}}
+const pvNotesOf=()=>{const mel=fmOf(S.lesson).melody;if(PV.segs&&PV.segs[PV.seg]){const g=PV.segs[PV.seg];return mel.filter(m=>m[1]>=g.from&&m[1]<g.to)}
+  const ph=pvPhrases(),c=ph[PV.fcur];if(!c)return[];const a=PV.fmode==='join'?ph[0].from:c.from;return mel.filter(m=>m[1]>=a&&m[1]<c.to)};
+function pvPractice(segs,label){pvStop();PV.segs=segs;PV.seg=0;PV.fmode='seq';PV.fidx=0;PV.err=0;pvCue();const w=$('#pvNow');if(w)w.textContent=label+': toque a tecla que pisca'+(S.mode==='memoria'?' (ela pisca só um instante)':'')+'.'}
+function pvNotes(){const box=$('#pvNotes');if(!box)return;box.innerHTML=pvNotesOf().map((m,i)=>`<span class="${PV.fmode&&i<PV.fidx?'feita':PV.fmode&&i===PV.fidx?'now':''}">${nm(m[0])}</span>`).join('')}
+// o relógio em tempos: lê o BPM a cada passo, então mudar o BPM no meio vale na hora
+function pvStop(){if(PV.tr){PV.tr.stop();PV.tr=null}PV.fmode=null;PV.segs=null;clearTimeout(PV.mt);for(const m in keyEl)keyEl[m].classList.remove('cue','root','next','bad','ok','lit');document.querySelectorAll('#pv .now').forEach(x=>x.classList.remove('now'));const b=document.getElementById('pvPlay');if(b&&b.dataset.lbl){b.innerHTML=b.dataset.lbl;delete b.dataset.lbl}}
+function pvPlay(from,to,evs,done){pvStop();ensureAudio();evs.sort((x,y)=>x.t-y.t);let pos=from,last=performance.now(),k=0;const live=new Set();
+  const T={alive:true,stop(){this.alive=false;live.forEach(f=>f());live.clear()}};
+  (function loop(){if(!T.alive)return;const now=performance.now();pos+=(now-last)/60000*PV.bpm;last=now;
+    while(k<evs.length&&evs[k].t<=pos)evs[k++].fn(live);
+    if(pos>=to){T.stop();if(PV.tr===T)PV.tr=null;document.querySelectorAll('#pv .now').forEach(x=>x.classList.remove('now'));const b=document.getElementById('pvPlay');if(b&&b.dataset.lbl){b.innerHTML=b.dataset.lbl;delete b.dataset.lbl}done&&done();return}setTimeout(loop,8)})();
+  PV.tr=T;const b=document.getElementById('pvPlay');if(b){b.dataset.lbl=b.innerHTML;b.innerHTML=IC.stop+'Parar'}}
+let pvK=0;
+function pvSound(n,vel){if(M.out){try{M.out.send([0x90,n,vel])}catch(e){}return()=>{try{M.out.send([0x80,n,0])}catch(e){}}}
+  if(!ac)return null;const k='pv'+(pvK++);voiceOn(n,k,vel>80?.22:.08);return()=>voiceOff(k)}
+// um acontecimento com começo e fim: o fim já entra na fila, ordenado (nada fica tocando)
+function pvEv(list,t,dur,on){const h={f:null};list.push({t,fn:live=>{let g=false;const off=on();h.f=()=>{if(g)return;g=true;off&&off();live.delete(h.f)};live.add(h.f)}});list.push({t:t+dur,fn:()=>h.f&&h.f()})}
+function pvMelody(a,b,list){const ns=fmOf(S.lesson).melody.filter(m=>m[1]>=a&&m[1]<b);
+  ns.forEach(([n,st,d],i)=>pvEv(list,st,d*.92,()=>{for(const m in keyEl)keyEl[m].classList.remove('cue','next','lit');keyEl[n]&&keyEl[n].classList.add('cue','lit');pvMapNow(nm(n),st);const nx=ns[i+1];if(nx&&nx[0]!==n&&keyEl[nx[0]])keyEl[nx[0]].classList.add('next');
+    const sw=document.getElementById('pvSt');if(sw){const sg=fmOf(S.lesson),fr=sg.phrases.find(f=>st>=f.from&&st<f.to),tb=Math.ceil(songEnd(sg)/sg.time[0]);sw.textContent='Tocando · '+(fr?fr.name+' · ':'')+'compasso '+(Math.floor(st/sg.time[0])+1)+' de '+tb+' · '+PV.bpm+' BPM'}const off=pvSound(n,96);return()=>{off&&off();keyEl[n]&&keyEl[n].classList.remove('cue','lit')}}))}
+function pvChords(a,b,list,lights){const s=fmOf(S.lesson),flat=/b|^F|^Dm|^Gm|^Cm/.test(s.key||S.lesson.sub.split('tom ')[1]||'C');
+  s.chords.filter(c=>c[1]>=a&&c[1]<b).forEach(c=>{let ch;try{ch=chord(c[0],'',flat)}catch(e){return}
+    pvEv(list,c[1],c[2]*.95,()=>{document.querySelectorAll('#pv [data-ci].now').forEach(x=>x.classList.remove('now'));const el=document.querySelector(`#pv [data-ci="${s.chords.indexOf(c)}"]`);if(el)el.classList.add('now');pvMapNow(c[0]);
+      const ns=lights?ch.notes:ch.notes.map(n=>n-12>=LO?n-12:n),offs=ns.map(n=>pvSound(n,lights?90:55));
+      if(lights){ch.notes.forEach(n=>keyEl[n].classList.add(n===ch.root?'root':'cue','lit'));}
+      return()=>{offs.forEach(o=>o&&o());if(lights)ch.notes.forEach(n=>keyEl[n].classList.remove('cue','root','lit'))}})})}
+// T78: durante o Tocar, o mapa da esquerda acompanha o acorde que soa (contorno na miniatura; em Slides, o slide passa junto)
+function pvMapNow(label,st){const cs=cmapItems();if(cs.length&&!!cs[0].note!==(st!==undefined))return;const ci=st!==undefined&&CFG.cmap!=='grade'?cs.findIndex(x=>x.st===st):cs.findIndex(x=>x.label===label);document.querySelectorAll('#pv .cgrid button.now,#pv .cslide.now').forEach(x=>x.classList.remove('now'));if(ci<0)return;
+  const gb=document.querySelectorAll('#pv .cgrid button')[ci];if(gb){pvBlink(gb);return}
+  const sl=document.querySelector('#pv .cslide');if(!sl)return;if(PV.slide!==ci){PV.slide=ci;const t=document.createElement('div');t.innerHTML=cmapHTML();const ns=t.querySelector('.cslide'),nn=t.querySelector('.cnav'),nv=document.querySelector('#pv .cnav');sl.replaceWith(ns);if(nv&&nn)nv.replaceWith(nn);pvBlink(ns)}else pvBlink(sl)}
+// T84: cada vez que a nota/acorde soa, a miniatura pisca (a repetição Dó4 → Dó4, C → C fica visível)
+function pvBlink(el){el.classList.remove('now','hit');void el.offsetWidth;el.classList.add('now','hit')}
+function pvMetro(a,b,list,beats){for(let k=Math.ceil(a);k<b;k++){const acc=k%beats===0;list.push({t:k,fn:()=>blip(acc?1600:1000,.05,'square',acc?.3:.15)})}}
+function pvBeats(a,b,list,beats){const s=fmOf(S.lesson);for(let k=Math.floor(a);k<b;k++)list.push({t:k,fn:()=>{document.querySelectorAll('#pv .pbar i.now').forEach(x=>x.classList.remove('now'));const el=document.querySelector(`#pv .pbar i[data-k="${k}"]`);if(el)el.classList.add('now')
+    const c=[...s.chords].reverse().find(x=>x[1]<=k),sw=document.getElementById('pvSt'),[ra,rb]=pvRange(),tot=Math.max(1,Math.ceil((rb-ra)/beats));if(sw)sw.textContent='Tocando '+S.lesson.parts[S.part].name+' · compasso '+(Math.floor((k-ra)/beats)+1)+' de '+tot+' · tempo '+(k%beats+1)+' de '+beats+(c?' · '+c[0]:'')+' · '+PV.bpm+' BPM'}})}
+function pvAct(a,x){const L=S.lesson,s=fmOf(L),[ra,rb]=pvRange();
+  if(a==='pview'){CFG.view=x;save('fm1s',CFG);clearT();openSong(L)}
+  else if(a==='cmap'){CFG.cmap=x;save('fm1s',CFG);pvRender()}
+  else if(a==='cplay'){pvChordTap(+x)}
+  else if(a==='cslide'){const n=cmapItems().length;PV.slide=x==='prev'?Math.max(0,PV.slide-1):x==='next'?Math.min(n-1,PV.slide+1):+x;if(x!=='prev'&&x!=='next'){CFG.cmap='slides';save('fm1s',CFG)}pvRender()}
+  else if(a==='pvopt'){const k={ch:'pvCh',met:'pvMet',metA:'pvMetA'}[x],def=x==='met'?false:true;CFG[k]=!(CFG[k]===undefined?def:CFG[k]);save('fm1s',CFG);clearT();openSong(L)}
+  else if(a==='bpm'){if(x==='m')PV.setB(PV.bpm-1);else if(x==='p')PV.setB(PV.bpm+1);else if(x==='o')PV.setB(s.bpm);else if(x==='t'){const b=pvTap();if(b)PV.setB(b)}}
+  else if(a==='pvmidi'){if(PV.tr){pvStop();return}const ev=[];pvMelody(ra,rb,ev);if(CFG.pvCh!==false)pvChords(ra,rb,ev,false);else fmOf(L).chords.filter(c=>c[1]>=ra&&c[1]<rb).forEach(c=>ev.push({t:c[1],fn:()=>pvMapNow(c[0])}));if(CFG.pvMet)pvMetro(ra,rb,ev,s.time[0]);pvPlay(ra,rb,ev)}
+  else if(a==='pvchords'){if(PV.tr){pvStop();return}const ev=[],bt=s.time[0],a0=Math.floor(ra/bt)*bt;pvChords(ra,rb,ev,true);if(CFG.pvMetA!==false)pvMetro(a0,rb,ev,bt);pvBeats(a0,rb,ev,bt);pvPlay(a0,rb,ev)}
+  else if(a==='pfr'){pvStop();PV.fcur=+x;openSong(L)}
+  else if(a==='pvhear'){if(PV.tr){pvStop();return}const f=pvPhrases()[PV.fcur];if(!f)return;const ev=[];pvMelody(f.from,f.to,ev);pvChords(f.from,f.to,ev,false);pvPlay(f.from,f.to,ev,()=>{const w=$('#pvNow');if(w)w.textContent='Agora você: toque Praticar.'})}
+  else if(a==='pvpmel'){const g=[{name:L.parts[S.part].name,from:ra,to:rb}];PV.segLabel=g[0].name;pvPractice(g,g[0].name)}
+  else if(a==='pvnotes'){if(PV.tr){pvStop();return}const ev=[];pvMelody(ra,rb,ev);pvChords(ra,rb,ev,false);pvPlay(ra,rb,ev)}
+  else if(a==='pvpnotes'){const ph=pvPhrases().map(f=>({name:f.name,from:Math.max(f.from,ra),to:Math.min(f.to,rb)}));if(!ph.length)return;PV.segLabel=L.parts[S.part].name;pvPractice(ph,ph[0].name)}
+  else if(a==='pvstep'||a==='pvjoin'){pvStop();PV.segs=null;PV.fmode=a==='pvjoin'?'join':'step';PV.fidx=0;pvCue();const f=pvPhrases()[PV.fcur];$('#pvNow').textContent=(PV.fmode==='join'?'Frases 1 a '+(PV.fcur+1):f.name)+': toque a tecla que pisca.'}
+}
+// T75: tocar um acorde do mapa (clique na miniatura da Grade): soa no FM-1 (ou no computador) e acende no teclado de baixo
+function pvChordTap(i){const c=cmapItems()[i];if(!c)return;if(PV.tr)pvStop();ensureAudio();clearTimeout(PV.tapT);if(PV.tapOff)PV.tapOff();
+  for(const m in keyEl)keyEl[m].classList.remove('cue','root','next','lit');c.notes.forEach(n=>keyEl[n]&&keyEl[n].classList.add(n===c.root?'root':'cue','lit'));
+  document.querySelectorAll('#pv .cgrid button.now,#pv .cslide.now').forEach(x=>x.classList.remove('now'));const gb=document.querySelectorAll('#pv .cgrid button')[i]||document.querySelector('#pv .cslide');if(gb)gb.classList.add('now');
+  const w=$('#pvNow');if(w)w.textContent=c.note?c.label:c.label+' · '+c.sub;
+  const offs=c.notes.map(n=>pvSound(n,90));PV.tapOff=()=>{offs.forEach(o=>o&&o());PV.tapOff=null};
+  PV.tapT=setTimeout(()=>{PV.tapOff&&PV.tapOff();c.notes.forEach(n=>keyEl[n]&&keyEl[n].classList.remove('cue','root','lit'));if(gb)gb.classList.remove('now')},1200)}
+const pvTap=(()=>{let ts=[];return()=>{const t=performance.now();ts=ts.filter(x=>t-x<3000).concat(t);if(ts.length<2)return null;return Math.round(60000/((ts.at(-1)-ts[0])/(ts.length-1)))}})();
+function pvCue(show){for(const m in keyEl)keyEl[m].classList.remove('cue','next');const ns=pvNotesOf();if(PV.fidx<ns.length){const n=ns[PV.fidx][0];keyEl[n]&&keyEl[n].classList.add('cue');if(S.mode==='memoria'&&!show){clearTimeout(PV.mt);PV.mt=setTimeout(()=>{keyEl[n]&&keyEl[n].classList.remove('cue')},700)}const nx=ns[PV.fidx+1];if(nx&&nx[0]!==n&&keyEl[nx[0]])keyEl[nx[0]].classList.add('next')}pvNotes()}
+function pvHit(n){const ns=pvNotesOf(),want=ns[PV.fidx];
+  if(want&&n===want[0]){PV.fidx++;PV.err=0;if(PV.fidx>=ns.length&&PV.fmode==='seq'&&PV.seg<PV.segs.length-1){PV.seg++;PV.fidx=0;chime();const g=PV.segs[PV.seg];$('#pvNow').textContent='Certo! Agora '+g.name+'.';pvCue();return}
+    if(PV.fidx>=ns.length){const ph=pvPhrases(),f=ph[PV.fcur];if(PV.fmode==='step'&&f)PV.done.add(f.name+f.from);chime();
+      const msg=PV.fmode==='seq'?(PV.segLabel||'Parte')+': concluída!':(PV.fmode==='join'?'Frases 1 a '+(PV.fcur+1)+' juntas':f.name)+': concluída!';PV.segs=null;PV.fmode=null;for(const m in keyEl)keyEl[m].classList.remove('cue','next');pvRender();$('#pvNow').textContent=msg;return}
+    $('#pvNow').textContent='Certo! Nota '+(PV.fidx+1)+' de '+ns.length;pvCue()}
+  else{flash(n,'bad');buzz();PV.err=(PV.err||0)+1;$('#pvNow').textContent=S.mode==='memoria'&&PV.err<2?'Quase. Tente de memória mais uma vez.':'Quase: a tecla que pisca é '+(want?nm(want[0]):'—');if(S.mode==='memoria'&&PV.err>=2)pvCue(true)}}
 function openLesson(id,mode){
   const L=LESSONS.find(l=>l.id===id);if(!L)return;
   clearT();clearKeys();if(S.lesson!==L)S.part=0;S.lesson=L;S.screen='intro';S.phase='idle';
@@ -923,7 +1174,7 @@ function bindIn(id){
   else midiMsg('Nenhuma entrada MIDI. Ligue o FM-1 pelo cabo USB de dados e espere aparecer aqui.',true);
   midiStatus();
 }
-function bindOut(id){ledsOff();M.out=id?M.access.outputs.get(id)||null:null;if(M.out){CFG.outName=M.out.name;save('fm1s',CFG)}syncLeds()}
+function bindOut(id){ledsOff();M.out=id?M.access.outputs.get(id)||null:null;if(M.out){CFG.outName=M.out.name;save('fm1s',CFG);voiceSend()}syncLeds()}
 function onMidi(ev){const d=ev.data;if(!d||d.length<3)return;const t=d[0]&0xf0,n=d[1],v=d[2];
   if(t===0x90&&v>0)midiOn(n);else if(t===0x80||(t===0x90&&v===0))release('m'+n)}
 function midiOn(n){
@@ -964,21 +1215,35 @@ function midiOff(){ledsOff();if(M.inp)M.inp.onmidimessage=null;[...held.keys()].
 $('#midiIn').addEventListener('change',e=>bindIn(e.target.value));
 $('#midiOut').addEventListener('change',e=>{const v=e.target.value;CFG.ledOk=!!v;save('fm1s',CFG);bindOut(v);
   midiMsg(!v?'LEDs desligados: o app não manda nada ao FM-1.':TUTOR_RE.test(M.out.name)?'Luzes guia ligadas: as teclas do passo acendem no FM-1.':'LEDs numa porta que não é o FM1 Pocket Tutor: se ela tocar notas em vez de acender luzes, volte para "— nenhuma —".')});
+// T71: um .mid vira uma música com melodia (fica no navegador, fm1midi)
+$('#midfile').addEventListener('change',async e=>{const fs=[...e.target.files];e.target.value='';let ok=0,err=[];
+  for(const f of fs){try{const sg=midiSong(SMF.read(await f.arrayBuffer()),f.name.replace(/\.midi?$/i,''));MELS.push(sg);ok++}catch(x){err.push(f.name+': '+x.message)}}
+  try{localStorage.setItem('fm1midi',JSON.stringify(MELS))}catch(x){err.push('não coube no navegador')}
+  rebuildMel();LESSONS=MODS.flatMap(m=>m.lessons);openCatalog('mel');
+  if(err.length)alert('Não consegui abrir: '+err.join('; '))});
+// Clique fora do modal (no fundo escuro) fecha o modal.
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}));
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const [a,x,y]=b.dataset.act.split(':');
   if(a==='home')home();
   else if(a==='help'){$('#help-body').innerHTML=helpHTML();$('#helpdlg').showModal()}
   else if(a==='helpclose')$('#helpdlg').close();
+  else if(a==='voice')voiceOpen();
+  else if(a==='voiceclose')$('#voicedlg').close();
+  else if(a==='vpick')voicePick(+b.dataset.v);
   else if(a==='back'){if(S.screen==='catalog')home();else if(S.screen==='song')openCatalog(S.mod);else if(S.lesson&&S.lesson.song&&(S.screen==='play'||S.screen==='result'))openLesson(S.lesson.id);else home()}
   else if(a==='cat')openCatalog(x);
   else if(a==='open')openLesson(x,y);
-  else if(a==='mode'){S.mode=x;CFG.mode=x;save('fm1s',CFG);openLesson(S.lesson.id)}
+  else if(a==='mode'){S.mode=x;CFG.mode=x;save('fm1s',CFG);if(S.screen==='song'){clearT();openSong(S.lesson)}else openLesson(S.lesson.id)}
   else if(a==='start'){ensureAudio();stopHear();startLesson()}
   else if(a==='hear')hear();
   else if(a==='part'){S.part=+x;openLesson(S.lesson.id)}
   else if(a==='nextpart'){S.part++;openLesson(S.lesson.id)}
   else if(a==='import')$('#cpfile').click();
+  else if(['pview','pvopt','bpm','pvmidi','pvchords','pfr','pvhear','pvstep','pvjoin','cmap','cslide','cplay','pvpmel','pvnotes','pvpnotes'].includes(a))pvAct(a,x);
+  else if(a==='midimport')$('#midfile').click();
+  else if(a==='unmidi'){MELS=[];try{localStorage.setItem('fm1midi','[]')}catch(e){}rebuildMel();LESSONS=MODS.flatMap(m=>m.lessons);openCatalog('mel')}
   else if(a==='unmine'){MINE=[];try{localStorage.setItem('fm1songs','[]')}catch(e){}rebuildMine();LESSONS=MODS.flatMap(m=>m.lessons);home()}
   else if(a==='listen'){ensureAudio();if(S.screen==='play')playDemo(step())}
   else if(a==='hint')hint(false);
@@ -1008,7 +1273,7 @@ $('#cpfile').addEventListener('change',async e=>{const fs=[...(e.target.files||[
   if(packs){location.reload();return}
   rebuildMine();LESSONS=MODS.flatMap(m=>m.lessons);openCatalog('m7');
   alert((ok.length?'Importadas '+ok.length+' cifras: '+ok.join(', '):'')+(ok.length&&bad.length?'\n':'')+(bad.length?'Não consegui ler: '+bad.join('; '):''))});
-applyCfg();home();
+applyCfg();home();voiceLabel();
 // Se o FM-1 já foi conectado antes, reconecta ao abrir (o Chrome lembra a permissão de MIDI).
 if(CFG.inName&&navigator.requestMIDIAccess)midiConnect();
 </script>

@@ -106,10 +106,9 @@ static uint32_t dp_area(uint32_t off)           /* the deploy area flash offset 
     return off >= DP_LO && off < DP_HI ? 0u : off >= DP2_LO && off < DP2_HI ? 1u : 2u;
 }
 #else
-#define HB_TABLE_AT 0x30000u                    /* flash offset of the image's slot table (XIP 0x0202C000) */
-#define HB_AREA_LO  0x31000u                    /* the image's modules: right after the table, where HX (BLE-MIDI) is */
-#define HB_AREA_HI  0x3E000u                    /* in a BLE build. FM1 Pocket Tutor (2026-11-18): --no-ble packs the FM6
-                                                 * there, up to the app slot's end (flash 0x3DFBC; DT_A at 0x3F000) */
+#define HB_TABLE_AT 0x20000u                    /* flash offset of the image's slot table (XIP 0x0201C000). FM1 Pocket */
+#define HB_AREA_LO  0x21000u                    /* Tutor 0.2 (T42, 2026-11-18): the table moved down from 0x30000 so the */
+#define HB_AREA_HI  0x31000u                    /* image's modules (the FM6) get 64 KiB below HX (BLE-MIDI, 0x31000) */
 #define DT_A        0x3F000u                    /* the deployed table, two copies (deploys, below), from FL_PLAIN_LO */
 #define DT_B        (DT_A + 0x1000u)          /* 0x40000 */
 #define DP_LO       (DT_A + 0x3000u)          /* 0x42000: the deployed modules, in the plain window, one area */

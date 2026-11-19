@@ -35,7 +35,7 @@ def check(cond, what):
 def fm1_layout():
     """the FM-1's constants from dock.c (the #else of #if BOARD_SMK37 with HB_TABLE_AT 0x30000)"""
     c = (SRC / "firmware" / "src" / "dock.c").read_text()
-    block = c[c.index("#define HB_TABLE_AT 0x30000u"):]
+    block = c[c.index("#define HB_TABLE_AT 0x20000u"):]
     got = {}
 
     def val(n, t=block):                        # a literal, or a sum of the names before it ("(DT_A + 0x1000u)")
