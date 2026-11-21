@@ -502,6 +502,62 @@ def fm6_cases():
           f"a DX7 voice dump sent to FM6 plays at once (A4 at {f1:.0f} Hz: its OP1 at x2) and is there after a power-on")
 
 
+def tutor_frame(mode, flag, bad, texts):
+    """the app's tutor screen (T92): F0 7D 50 54 01 mode flag bad, the texts split by 00, F7"""
+    return bytes([0xF0, 0x7D, 0x50, 0x54, 1, mode, flag, bad]) + b"\x00".join(t.encode() for t in texts) + b"\xF7"
+
+
+def tutor_px(case, x, y):
+    """a pixel of the LCD (240 x 240) of the run's screen: screen.png, or the panel's (the LCD at 370, 42, two to one)"""
+    from PIL import Image
+    s = OUT / case / "screen.png"
+    if s.exists():
+        img = Image.open(s).convert("RGB")
+        if img.size == (240, 240):
+            return img.getpixel((x, y))
+        return img.getpixel((x * img.size[0] // 240, y * img.size[1] // 240))
+    img = Image.open(OUT / case / "panel.png").convert("RGB")
+    return img.getpixel((370 + 2 * x, 42 + 2 * y))
+
+
+def near(c, ref, tol=24):
+    return all(abs(a - b) <= tol for a, b in zip(c, ref))
+
+
+def tutor_cases():
+    """T92: the app's SysEx puts the tutor's screen over the module's; the keys are the guide LEDs' (channel 16):
+    basic, one colour for what to play; advanced, the root lilac and the next dark yellow; wrong, the key red and
+    a red band; CC 123 on the guide channel takes the module's screen back"""
+    texts = ["FM6 - TINE EP", "F#m", "F#3 - A3 - C#4", "PROXIMO: D", "COMPASSO 2 DE 8 - 90 BPM", ""]
+    guide = ["9f367f", "9f3964", "9f3d64", "9f3e20", "9f4220", "9f4520"]   # F#3 root, A3 C#4 lit, D4 F#4 A4 next
+    def keys(at, frame):
+        return ",".join(f"{at}:m{g}" for g in guide) + f",{at + 50}:m{frame.hex()}"
+    YEL, LIL, DRK, KEY, RED = (255, 229, 0), (196, 161, 255), (122, 110, 30), (210, 210, 210), (255, 107, 107)
+    # key x: white k (0 = F3) at 8 + 14 k, 13 wide; black over the line between two whites, 9 wide (dock.c tu_keys)
+    A3, D4, F4, FS3 = (8 + 14 * 2 + 6, 150), (8 + 14 * 5 + 6, 150), (8 + 14 * 7 + 6, 150), (8 + 14 * 1 - 1, 110)
+    run("tutor_basic", keys(1500, tutor_frame(0, 0, 0, texts)), 2300)
+    b = [tutor_px("tutor_basic", *p) for p in (A3, FS3, D4)]
+    check("tutor_basic", near(b[0], YEL) and near(b[1], YEL) and near(b[2], KEY),
+          f"basic: A3 and the root F#3 yellow, the next (D4) left white: {b}")
+    # T143 (Figma 297:251): the lit black key (C#4) with a 1 px dark edge left, right and below, none on top;
+    # an unlit black key (D#4) as before
+    BLK0 = (0, 0, 0)
+    cs = [tutor_px("tutor_basic", *p) for p in ((77, 120), (73, 120), (81, 120), (77, 137), (77, 100), (91, 120))]
+    check("tutor_black_edge", near(cs[0], YEL) and near(cs[1], BLK0) and near(cs[2], BLK0) and near(cs[3], BLK0)
+          and near(cs[4], YEL) and not near(cs[5], YEL),
+          f"a lit black key (C#4): yellow inside, dark edge left/right/below, yellow at the top; D#4 unlit: {cs}")
+    run("tutor_adv", keys(1500, tutor_frame(1, 0, 0, texts)), 2300)
+    a = [tutor_px("tutor_adv", *p) for p in (A3, FS3, D4)]
+    check("tutor_adv", near(a[0], YEL) and near(a[1], LIL) and near(a[2], DRK),
+          f"advanced (TUTOR+): A3 yellow, the root F#3 lilac, the next D4 dark yellow: {a}")
+    run("tutor_bad", keys(1500, tutor_frame(0, 2, 65, texts[:5] + ["FORA DO ACORDE: F4"])), 2300)
+    w = [tutor_px("tutor_bad", *p) for p in (F4, (120, 220))]
+    check("tutor_bad", near(w[0], RED) and near(w[1], RED), f"wrong: the key pressed (F4) red, and the red band: {w}")
+    run("tutor_off", keys(1500, tutor_frame(0, 0, 0, texts)) + ",2000:mbf7b00", 2600)
+    o = tutor_px("tutor_off", *A3)
+    check("tutor_off", not near(o, YEL), f"CC 123 on the guide channel: the tutor's screen gone (A3 at {o})")
+
+
 def niagara_cases():
     """NIAGARA: Evan Yerburgh's Niagara Drift (modules/niagara), two drones"""
     k = pick("NIAGARA") + ",2000:12,2050:12^"   # PLAY: the drones fade in (its start animation ends on the press)
@@ -763,6 +819,7 @@ def main():
 
     if "FM6" in names:
         fm6_cases()
+        tutor_cases()
 
     if "B3 ORGAN" in names:
         # Standard B (88 8000 000) under ten keys; then over MIDI every drawbar out (CC 70..78 at 0, as setBfree),

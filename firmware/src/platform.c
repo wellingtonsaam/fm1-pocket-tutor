@@ -160,6 +160,9 @@ static void ota_show(uint32_t step, int32_t code)
 static void ota_commit(const uint8_t *parm)
 {
     bootguard_clear(&bootguard);
+#ifdef APP_PRE_UPDATE
+    APP_PRE_UPDATE();                           /* the app's: what it runs is stopped, not crashed */
+#endif
     usb_detach();
     fm1_delay_ms(30);
     fm1_enter_update(parm);

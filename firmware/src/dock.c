@@ -65,9 +65,11 @@
 #define APP_SYSEX hb_sysex
 #define APP_MIDI_OUT ble_out                    /* BLE-MIDI (src/ble/hx.h): out from the audio ISR, in from TIMER5 */
 #define APP_T5_POLL t5_poll                     /* TIMER5: the DIN jack's UART flushed, BLE-MIDI in */
+#define APP_PRE_UPDATE hb_pre_update            /* an update's reset: not a module's hang (no strike) */
 #include <stdint.h>
 static void ble_out(uint32_t pkt);
 static void t5_poll(void);
+static void hb_pre_update(void);
 static void hb_boot_hook(uint32_t p3);
 static void hb_boot_now(void);
 #if !BOARD_SMK37                                /* (the SMK-37's keys have two contacts: their velocity is the scan's) */
@@ -849,6 +851,12 @@ static void h_led(uint32_t id, uint32_t on)   /* the buttons' LEDs (the SMK's ke
 #define GUIDE_CH 15u                            /* MIDI channel 16 */
 #define GUIDE_LO 53u                            /* F3: key 0 */
 static uint32_t g_lit, g_glow, g_blink, g_was;  /* bit k: key k */
+/* the tutor's screen (T92): the state, filled by the app's SysEx (tu_frame), drawn by tu_draw */
+#define TU_F 6u                                 /* timbre, name, detail, next, foot, message */
+#define TU_L 32u
+static struct { uint8_t on, mode, flag, bad, dirty; uint32_t snap; char f[TU_F][TU_L]; } tu __attribute__((section(".noinit")));   /* (.noinit: the host's RAM keeps its layout; zeroed at start) */
+static uint8_t tu_rx[200] __attribute__((section(".noinit")));                      /* the last frame from USB, for the main loop */
+static volatile uint32_t tu_rx_n __attribute__((section(".noinit")));
 static uint32_t mod_kon, mod_kdim;              /* the key LEDs the module asked for (bit k: key k) */
 
 static void led_dim_set(uint32_t id, uint32_t on)   /* the glow of LED id (hal/fm1_input.h's fm1_led_dim) */
@@ -886,8 +894,10 @@ static int guide_midi(uint32_t s, uint32_t d1, uint32_t d2)
     if ((s & 15u) != GUIDE_CH || s >= 0xF0u)
         return 0;
     if ((s & 0xF0u) == 0xB0u) {
-        if (d1 == 123u)
+        if (d1 == 123u) {
             g_lit = g_glow = g_blink = 0;
+            tu.on = 0;                          /* (and the tutor's screen: the practice is over) */
+        }
         return 1;
     }
     if ((s & 0xF0u) != 0x90u && (s & 0xF0u) != 0x80u)
@@ -1098,6 +1108,14 @@ static void app_audio(int32_t *out, uint32_t n)
     hb_blocks++;
 }
 
+/* the update loader takes over by a reset and hands back by the watchdog: the module was not hung. Without this
+ * the boot after an install counts a strike for the module playing (two installs: it is struck, NO MODULE) */
+static void hb_pre_update(void)
+{
+    hb_active = 0;
+    hb_nv.active = 0;
+}
+
 /* ---- switching */
 static void stop_module(void)
 {
@@ -1230,8 +1248,16 @@ static int din_get(uint8_t *st_, uint8_t *d1, uint8_t *d2)
         din_r = (din_r + 1u) % DIN_RING;
         if (b >= 0xF8u)
             continue;                           /* real time: ignored */
-        if (b == 0xF7u && din_sx > 1u)
-            df_din_n = din_sx - 1u;
+        if (b == 0xF7u && din_sx > 1u) {
+#if !BOARD_SMK37
+            uint32_t n = din_sx - 1u;
+            if (n >= 4u && n <= sizeof tu_rx && df_din[0] == 0x7Du && df_din[1] == 0x50u && df_din[2] == 0x54u) {
+                memcpy(tu_rx, df_din, n);       /* the tutor's screen (T92), from the DIN jack too */
+                tu_rx_n = n;
+            } else
+#endif
+                df_din_n = din_sx - 1u;
+        }
         if (din_sx && b < 0x80u) {
             if (din_sx <= DF_MAX)
                 df_din[din_sx++ - 1u] = (uint8_t)b;
@@ -1279,6 +1305,162 @@ static void draw_top(int32_t oct)
     cv_rect(0, 19, 240, 1, C_OFF);
     cv_blit(0, 0);
 }
+
+#if !BOARD_SMK37
+/* ---- the tutor's screen (T92): what to play, over the module's drawing while the app practices.
+ * SysEx F0 7D 50 54 01 <mode> <flag> <bad> <timbre> 00 <name> 00 <detail> 00 <next> 00 <foot> 00 <message> F7
+ * shows it (mode 0 basic, 1 advanced; flag 0, 1 right, 2 wrong; bad: the wrong key's note, 0 none; texts in
+ * 7-bit ASCII); F0 7D 50 54 02 F7, or CC 123 on the guide channel, hides it. The keys are the guide LEDs':
+ * lit = play this, blink = the root, glow = the next. Basic: one colour for what to play; advanced: the root
+ * lilac and the next dark yellow, with their legend. The host's top bar stays (the module, the octave). */
+#define TU_WHITE RGB(230, 230, 230)
+#define TU_GRAY RGB(140, 140, 140)
+#define TU_ORANGE RGB(255, 159, 28)
+#define TU_BLUE RGB(111, 168, 255)
+#define TU_KEY RGB(210, 210, 210)
+#define TU_BLK RGB(20, 20, 20)
+#define TU_LIT RGB(255, 229, 0)
+#define TU_ROOT RGB(196, 161, 255)
+#define TU_NEXT RGB(122, 110, 30)
+#define TU_OK RGB(144, 238, 144)
+#define TU_BAD RGB(255, 107, 107)
+static uint32_t tu_drawn[3] __attribute__((section(".noinit"))), tu_shown __attribute__((section(".noinit")));
+
+static void tu_frame(const uint8_t *p, uint32_t n)   /* p: 7D 50 54 <cmd> ... (no F0, no F7) */
+{
+    uint32_t i, k = 0, j = 0;
+    if (n < 4u)
+        return;
+    if (p[3] == 2u) {
+        tu.on = 0;
+        return;
+    }
+    if (p[3] != 1u || n < 7u)
+        return;
+    tu.mode = p[4];
+    tu.flag = p[5];
+    tu.bad = p[6] >= GUIDE_LO && p[6] < GUIDE_LO + 27u ? p[6] : 0;
+    if (tu.flag == 1u)
+        tu.snap = g_lit | g_blink;              /* right: the keys asked, in green (the app clears their LEDs) */
+    memset(tu.f, 0, sizeof tu.f);
+    for (i = 7; i < n && k < TU_F; i++) {
+        if (!p[i]) {
+            k++;
+            j = 0;
+            continue;
+        }
+        if (j < TU_L - 1u)
+            tu.f[k][j++] = (char)(p[i] >= 32u && p[i] <= 126u ? p[i] : '?');
+    }
+    tu.on = 1;
+    tu.dirty = 1;
+}
+
+static int tu_black(uint32_t note) { return (0x54Au >> (note % 12u)) & 1u; }
+static uint16_t tu_kc(uint32_t k, uint32_t lit, uint32_t root, uint32_t nxt, uint16_t base)
+{
+    uint32_t b = 1u << k;
+    if (tu.bad == GUIDE_LO + k)
+        return TU_BAD;
+    if (tu.flag == 1u)
+        return tu.snap & b ? TU_OK : base;
+    if (root & b)
+        return TU_ROOT;
+    if (lit & b)
+        return TU_LIT;
+    if (nxt & b)
+        return TU_NEXT;
+    return base;
+}
+static void tu_keys(uint32_t y)                 /* the 27 keys, 16 white of 13 px every 14 from x = 8 (Dinghy's) */
+{
+    uint32_t k, w = 0, adv = tu.mode != 0, root = adv ? g_blink : 0, lit = g_lit | (adv ? 0 : g_blink), nxt = adv ? g_glow : 0;
+    cv_begin(240, 64, C_BLACK);
+    for (k = 0; k < 27u; k++)
+        if (!tu_black(GUIDE_LO + k)) {
+            cv_rect(8 + (int32_t)w * 14, 0, 13, 64, tu_kc(k, lit, root, nxt, TU_KEY));
+            w++;
+        }
+    for (k = 0, w = 0; k < 27u; k++)
+        if (tu_black(GUIDE_LO + k)) {
+            int32_t x = 8 + (int32_t)w * 14 - 5;
+            uint16_t c = tu_kc(k, lit, root, nxt, TU_BLK);
+            cv_rect(x, 0, 9, 38, c != TU_BLK ? C_BLACK : c);   /* T143 (Figma 297:251): a lit black key keeps a 1 px */
+            if (c != TU_BLK)                    /* edge in the screen's background colour left, right and below, none */
+                cv_rect(x + 1, 0, 7, 37, c);    /* on top: apart from the lit white keys next to it                  */
+        } else
+            w++;
+    cv_blit(0, y);
+}
+static void tu_name(uint32_t y)                 /* the name: what the big font has (A..Z, 0..9, #, /), the rest small */
+{
+    char a[TU_L], b[TU_L];
+    const char *s = tu.f[1];
+    uint32_t i = 0, j = 0;
+    int32_t wa, wb, x;
+    while (s[i] && (uint8_t)s[i] < 96u && s[i] != ' ') {
+        a[i] = s[i];
+        i++;
+    }
+    a[i] = 0;
+    while (s[i] && j < TU_L - 1u)
+        b[j++] = s[i++];
+    b[j] = 0;
+    wa = text_w(&FONT_L, a);
+    wb = text_w(&FONT_S, b);
+    x = (240 - wa - wb) / 2;
+    cv_begin(240, FONT_L.h, C_BLACK);
+    cv_text(x, 0, &FONT_L, a, TU_WHITE);
+    cv_text(x + wa, (int32_t)FONT_L.h - (int32_t)FONT_S.h - 2, &FONT_S, b, TU_WHITE);
+    cv_blit(0, y);
+}
+static void tu_legend(uint32_t y)               /* advanced: [lilac] FUNDAMENTAL  [dark yellow] <the next> */
+{
+    uint32_t r = g_blink != 0, nx = tu.f[3][0] != 0;
+    int32_t w = (r ? 14 + text_w(&FONT_S, "FUNDAMENTAL") + (nx ? 12 : 0) : 0) + (nx ? 14 + text_w(&FONT_S, tu.f[3]) : 0), x;
+    cv_begin(240, FONT_S.h, C_BLACK);
+    x = (240 - w) / 2;
+    if (r) {
+        cv_rect(x, 3, 10, 10, TU_ROOT);
+        cv_text(x + 14, 0, &FONT_S, "FUNDAMENTAL", TU_GRAY);
+        x += 14 + text_w(&FONT_S, "FUNDAMENTAL") + 12;
+    }
+    if (nx) {
+        cv_rect(x, 3, 10, 10, TU_NEXT);
+        cv_text(x + 14, 0, &FONT_S, tu.f[3], TU_GRAY);
+    }
+    cv_blit(0, y);
+}
+static void tu_draw(uint32_t full)              /* below the host's bar; the keys again when the guide changes */
+{
+    if (full || tu.dirty) {
+        lcd_fill(0, HB_TOP, 240, 240 - HB_TOP, C_BLACK);
+        draw_text_box(0, 28, 240, &FONT_S, tu.f[0], TU_ORANGE, 1);
+        tu_name(46);
+        draw_text_box(0, 80, 240, &FONT_S, tu.f[2], TU_GRAY, 1);
+        draw_text_box(0, 186, 240, &FONT_S, tu.f[4], TU_GRAY, 1);
+        if (tu.flag) {
+            uint16_t bg = tu.flag == 1u ? TU_OK : TU_BAD;
+            int32_t w = text_w(&FONT_S, tu.f[5]);
+            lcd_fill(0, 208, 240, 24, bg);
+            cv_begin(240, FONT_S.h, bg);
+            cv_text((240 - w) / 2, 0, &FONT_S, tu.f[5], C_BLACK);
+            cv_blit(0, 212);
+        }
+    }
+    if (full || tu.dirty || g_lit != tu_drawn[0] || g_glow != tu_drawn[1] || g_blink != tu_drawn[2]) {
+        tu_keys(100);
+        if (tu.mode)
+            tu_legend(166);
+        else
+            draw_text_box(0, 166, 240, &FONT_S, tu.f[3], TU_BLUE, 1);
+        tu_drawn[0] = g_lit;
+        tu_drawn[1] = g_glow;
+        tu_drawn[2] = g_blink;
+    }
+    tu.dirty = 0;
+}
+#endif
 
 /* the list, then OPTIONS (past the last module): the host's, ABOUT, then BLUETOOTH (the last line, as it was) */
 enum { O_CC7, O_MASTER_CC7, O_CH, O_LOCAL, O_EQ, O_KNOBS, O_THRU };
@@ -2262,6 +2444,13 @@ static uint32_t pr_head(uint8_t *r)             /* the result's summary, r[1..27
 
 static int hb_sysex(const uint8_t *p, uint32_t n)   /* platform_poll: a USB frame, kept for the main loop */
 {
+#if !BOARD_SMK37
+    if (n >= 4u && n <= sizeof tu_rx && p[0] == 0x7Du && p[1] == 0x50u && p[2] == 0x54u) {   /* the tutor's screen */
+        memcpy(tu_rx, p, n);                    /* (the latest wins: only what is on screen now matters) */
+        tu_rx_n = n;
+        return 1;
+    }
+#endif
     if (n < 5u || n > DF_MAX || p[0] != 0x7Du || p[1] != 0x48u || p[2] != 0x42u || df_usb_n >= DF_USB_Q)
         return 0;
     memcpy(df_usb[df_usb_w % DF_USB_Q], p, n);
@@ -2784,6 +2973,11 @@ static void app_main(void)
     uint32_t sheld = 0, t_press = 0;            /* the sensed keys held (bit k); the pressure's last round */
     int32_t oct_drawn = 99;
     uint8_t held[27] = {0}, press_sent[27] = {0};
+#if !BOARD_SMK37
+    memset(&tu, 0, sizeof tu);                  /* (the tutor's screen lives in .noinit: off at start) */
+    tu_rx_n = 0;
+    tu_shown = 0;
+#endif
     sense_ev_t se;
 
     hb_pc_limits(PC_RAM_HI);                    /* (the deployed modules' code may run: see there) */
@@ -3184,6 +3378,12 @@ static void app_main(void)
             }
         }
 
+#if !BOARD_SMK37
+        if (tu_rx_n) {
+            tu_frame(tu_rx, tu_rx_n);
+            tu_rx_n = 0;
+        }
+#endif
         sel_led(picker);
         if ((!screen || picker) && !canvas_lent() && (st.oct != oct_drawn || fm1_ms - t_top > 500u || full)) {
             /* (not over a canvas module's memory: `screen` is the module's before a pick, and the one picked may
@@ -3193,9 +3393,30 @@ static void app_main(void)
             draw_top(st.oct);
         }
         m = hb_active;                          /* under the picker: the module's loop still (its keys), not seen */
+#if !BOARD_SMK37
+        {
+            uint32_t tutor = tu.on && !picker && !canvas_lent();   /* the tutor's screen over the module's */
+            if (tu_shown && !tutor && !picker) {
+                lcd_fill(0, HB_TOP, 240, 240 - HB_TOP, C_BLACK);
+                full = 1;                       /* (gone: the module's, all of it again) */
+            }
+            scr_hidden = (uint8_t)(picker != 0 || tutor);
+            if (m && m->draw) m->draw(picker || tutor ? 0 : full);
+            scr_hidden = 0;
+            if (tutor) {
+                if (screen && (fm1_ms - t_top > 500u || !tu_shown)) {   /* (a module with all of the screen: the bar is ours) */
+                    t_top = fm1_ms;
+                    draw_top(st.oct);
+                }
+                tu_draw(!tu_shown || full);
+            }
+            tu_shown = tutor;
+        }
+#else
         scr_hidden = (uint8_t)(picker != 0);
         if (m && m->draw) m->draw(picker ? 0 : full);
         scr_hidden = 0;
+#endif
         if (!picker)
             full = 0;                           /* (the picker gone: full, all of it again) */
 
