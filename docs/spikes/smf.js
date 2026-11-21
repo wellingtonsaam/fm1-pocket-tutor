@@ -61,17 +61,36 @@ const SMF = (() => {
   /** Acorde provável de um conjunto de notas (classes 0..11 com peso). */
   const TPL = [['', [0, 4, 7]], ['m', [0, 3, 7]], ['7', [0, 4, 7, 10]], ['m7', [0, 3, 7, 10]], ['maj7', [0, 4, 7, 11]], ['dim', [0, 3, 6]], ['sus4', [0, 5, 7]]];
   const NM = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-  function guessChord(w, bass) {
+  // key (opcional, de guessKey): nota fora do tom pesa um pouco contra. Desempata quando falta a terça:
+  // F# + C# + E em Dó# menor é F#m7 (A está no tom), não F#7 (A# não está). sureBass: a nota veio da faixa de baixo. T138, 21/11/2026
+  function guessChord(w, bass, key, sureBass) {
     let best = null;
+    const mx = Math.max(...w);
     for (let r = 0; r < 12; r++) for (const [q, iv] of TPL) {
       const set = iv.map(i => (r + i) % 12); let s = 0;
       for (let pc = 0; pc < 12; pc++) s += set.includes(pc) ? w[pc] : -0.6 * w[pc];
-      s -= set.filter(pc => !w[pc]).length * 0.4 * Math.max(...w);
-      if (bass != null && bass === r) s += 0.3 * Math.max(...w);
-      if (iv.length === 4) s -= 0.15 * Math.max(...w);
+      s -= set.filter(pc => !w[pc]).length * 0.4 * mx;
+      if (bass != null && bass === r) s += (sureBass ? 0.8 : 0.3) * mx;   // nota da faixa de baixo: a fundamental quase certa
+      else if (sureBass && bass != null) s -= 0.5 * mx;                     // inversão é rara: baixo fora da fundamental pesa contra
+      if (iv.length === 4) s -= 0.15 * mx;
+      if (key) s -= set.filter(pc => !key.scale.includes(pc)).length * 0.2 * mx;
       if (!best || s > best.s) best = { s, name: NM[r] + q };
     }
     return best && best.s > 0 ? best.name : null;
   }
-  return { read, write, meta, text, guessChord };
+  /** Tom provável (Krumhansl-Schmuckler) das notas de várias faixas: {tonic, minor, name, scale}. */
+  const KMAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KMIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function guessKey(tracks) {
+    const h = Array(12).fill(0);
+    tracks.forEach(t => t.notes.forEach(n => { h[n.n % 12] += n.d; }));
+    if (!h.some(Boolean)) return null;
+    const corr = (p, r) => { const mh = h.reduce((a, b) => a + b) / 12, mp = p.reduce((a, b) => a + b) / 12; let x = 0, y = 0, z = 0;
+      for (let i = 0; i < 12; i++) { const a = h[(i + r) % 12] - mh, b = p[i] - mp; x += a * b; y += a * a; z += b * b; } return x / Math.sqrt(y * z); };
+    let best = null;
+    for (let r = 0; r < 12; r++) for (const minor of [false, true]) { const c = corr(minor ? KMIN : KMAJ, r); if (!best || c > best.c) best = { c, r, minor }; }
+    const iv = best.minor ? [0, 2, 3, 5, 7, 8, 10, 11] : [0, 2, 4, 5, 7, 9, 11];   // menor: natural + a sensível (7ª maior)
+    return { tonic: best.r, minor: best.minor, name: NM[best.r] + (best.minor ? 'm' : ''), scale: iv.map(i => (best.r + i) % 12) };
+  }
+  return { read, write, meta, text, guessChord, guessKey, NM };
 })();

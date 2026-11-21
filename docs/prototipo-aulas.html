@@ -492,6 +492,25 @@ header .hsel select.tg{-webkit-appearance:none;appearance:none;height:32px;paddi
 .pvbar{background:#111;color:#c8ff3a;font:700 13px/1.2 var(--pt-font-mono);border-radius:8px;padding:15px 16px;margin-top:12px;letter-spacing:.04em}
 .pvbar .dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#2bd44a;margin-right:10px;vertical-align:-1px}
 .pvbar.off{color:#bbb}.pvbar.off .dot{background:#666}
+/* T139 (Figma 114:780): a barra MIDI numa linha só. Timbre é uma seleção (rótulo + valor + chevron), igual à Cifragem.
+   Entrada, LEDs e Desconectar saem da barra: ficam em Ajustes e no botão FM-1 do cabeçalho. Mensagem só quando há o que dizer */
+#midibar .mb-r{display:none!important}
+#midibar #midiMsg:empty{display:none}
+#midibar #btVoice{position:relative;height:32px;min-height:32px;padding:6px 30px 6px 10px;border:var(--pt-stroke-thin) solid var(--line);border-radius:6px;box-shadow:none;font:700 11px var(--pt-font-mono);text-transform:uppercase;letter-spacing:0;background:var(--pt-color-surface-card);color:var(--txt)}
+#midibar #btVoice .vk{font:500 12px var(--pt-font-body);text-transform:none;letter-spacing:0;margin-right:2px}
+#midibar #btVoice::after{content:"";position:absolute;right:10px;top:50%;width:12px;height:12px;margin-top:-6px;background:var(--pt-color-ink-primary);pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") center/12px no-repeat}
+/* T140: listas (select) com a lista própria do app, no estilo Neo Brutalism: borda preta, sombra dura, grupos com título,
+   a opção escolhida em ciano com o ícone de check. Vale para todas as listas (cifragem, idioma, Entrada, LEDs, faixa) */
+.ptm{position:fixed;z-index:1000;min-width:160px;max-width:min(420px,calc(100vw - 16px));max-height:min(420px,calc(100vh - 16px));overflow:auto;padding:6px;
+  background:var(--pt-color-surface-card);color:var(--txt);border:var(--pt-stroke) solid var(--line);border-radius:var(--pt-radius-md);box-shadow:var(--pt-shadow-6)}
+.ptm .ptm-g{padding:10px 10px 4px;font:900 11px/1 var(--pt-font-head);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.ptm .ptm-g:first-child{padding-top:6px}
+.ptm .ptm-o{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:6px 10px 6px 8px;border:var(--pt-stroke-thin) solid transparent;border-radius:6px;
+  background:none;box-shadow:none;color:inherit;font:700 12px/1.2 var(--pt-font-mono);text-transform:uppercase;text-align:left;cursor:pointer;white-space:nowrap}
+.ptm .ptm-o .ptm-c{flex:none;width:16px;height:16px;display:inline-flex}.ptm .ptm-o .ptm-c .ic{width:16px;height:16px}
+.ptm .ptm-o.on{background:var(--pt-color-accent-tab);color:var(--pt-color-ink-on-accent);border-color:var(--line)}
+.ptm .ptm-o.hi:not(.on){background:var(--pt-color-accent-primary);color:var(--pt-color-ink-on-accent);border-color:var(--line)}
+.ptm .ptm-o:disabled{opacity:.45;cursor:default}
 </style>
 </head>
 <body>
@@ -528,10 +547,10 @@ header .hsel select.tg{-webkit-appearance:none;appearance:none;height:32px;paddi
     <div class="ajg gout"><div class="ajt">LEDs</div><label class="ajbox"><select id="ajOut" aria-label="Saída das luzes guia"></select></label></div>
   </div>
   <div id="midibar" role="status">  <!-- T112 (Figma 122:17768): barra fixa acima do teclado -->
-    <div class="mb-l"><button class="tg midionly" data-act="midi:cal" id="btCal">Calibrar</button><button class="tg midionly" data-act="midi:led">Testar LEDs</button>
+    <div class="mb-l">  <!-- T139 (Figma 114:780): Cifragem, Timbre, Nomes, Calibrar, Testar LEDs, Log do som, Tecla fundamental -->
     <span class="hsel"><select id="cifra" class="tg" aria-label="Cifragem: como notas e acordes aparecem" title="Cifragem: como notas e acordes aparecem em todas as telas"></select></span>
     <button class="tg" id="btVoice" data-act="voice" title="Escolher o timbre do FM-1"><span class="vk">Timbre:</span> <span id="voiceName">escolher</span></button>
-    <button class="tg" id="tgNames" aria-pressed="false" data-act="tg:names">Nomes</button><button class="tgl" id="tgMono" aria-pressed="true" data-act="tg:mono" title="ON: a fundamental tem cor própria. OFF: todas as luzes guia ficam amarelas, como os LEDs de uma cor só do FM-1"><span class="tgl-l">Tecla fundamental</span><span class="tgl-tr" aria-hidden="true"><i></i></span><span class="tgl-st" aria-hidden="true"></span></button><button class="tg" id="btLog" data-act="log" title="Onde cada som saiu: FM-1, computador ou mudo">Log do som</button></div>
+    <button class="tg" id="tgNames" aria-pressed="false" data-act="tg:names">Nomes</button><button class="tg midionly" data-act="midi:cal" id="btCal">Calibrar</button><button class="tg midionly" data-act="midi:led">Testar LEDs</button><button class="tg" id="btLog" data-act="log" title="Onde cada som saiu: FM-1, computador ou mudo">Log do som</button><button class="tgl" id="tgMono" aria-pressed="true" data-act="tg:mono" title="ON: a fundamental tem cor própria. OFF: todas as luzes guia ficam amarelas, como os LEDs de uma cor só do FM-1"><span class="tgl-l">Tecla fundamental</span><span class="tgl-tr" aria-hidden="true"><i></i></span><span class="tgl-st" aria-hidden="true"></span></button></div>
     <span class="grow" id="midiMsg"></span>
     <div class="mb-r midionly"><label class="selic" title="Entrada"><svg class="sic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg><select id="midiIn" aria-label="Entrada"></select></label>
     <label title="Luzes guia: notas no canal 16 para o firmware FM1 Pocket Tutor. Em outros firmwares, deixe em — nenhuma —">LEDs <select id="midiOut"></select></label>
@@ -569,7 +588,7 @@ const L_DONE=new WeakMap();
 const L_ORIG=new WeakMap(),L_AORIG=new WeakMap();   // T118: o texto em português de cada nó, para trocar de idioma sem recarregar
 function trNode(n){const v=n.nodeValue;if(L_DONE.get(n)===v)return;L_ORIG.set(n,v);const t=tr(v);L_DONE.set(n,t);if(t!==v)n.nodeValue=t}
 function trAttrs(e){if(!e.getAttribute)return;let o=L_AORIG.get(e);for(const a of ['placeholder','title','aria-label']){const v=e.getAttribute(a);if(!v)continue;if(!o){o={};L_AORIG.set(e,o)}if(o[a]&&o[a].t===v)continue;const t=tr(v);o[a]={pt:v,t};if(t!==v)e.setAttribute(a,t)}}
-const L_SKIP=n=>{const p=n.nodeType===1?n:n.parentElement;return !p||!!p.closest('script,style,#lang,#cifra')};
+const L_SKIP=n=>{const p=n.nodeType===1?n:n.parentElement;return !p||!!p.closest('script,style,#lang,#cifra,#ajCifra,.ptm')};
 function trTree(root){if(LANG==='pt'||L_SKIP(root))return;if(root.nodeType===3){trNode(root);return}if(root.nodeType!==1)return;trAttrs(root);
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);let n;while(n=w.nextNode()){if(L_SKIP(n))continue;if(n.nodeType===3)trNode(n);else trAttrs(n)}}
 {const _al=window.alert.bind(window);window.alert=m=>_al(tr(String(m)));
@@ -1046,15 +1065,24 @@ function midiSong(m,name){
   const sh=[0,-12,12,-24,24].find(x=>lo+x>=LO&&hi+x<=HI);
   notes=notes.map(n=>{let p=n[0]+(sh??0);while(p<LO)p+=12;while(p>HI)p-=12;return [p,n[1],n[2]]});
   const end=Math.ceil(Math.max(...notes.map(n=>n[1]+n[2]))),oth=tr.filter(t=>t!==mel),others=oth.length?oth:[mel],chords=[];   // só piano: os acordes saem da mesma faixa
-  for(let k=0;k<end;k++){const w=Array(12).fill(0);let bass=null,bl=999;
-    others.forEach(t=>t.notes.forEach(n=>{const a=Math.max(n.t,k*beat),e=Math.min(n.t+n.d,(k+1)*beat);if(e>a){w[n.n%12]+=e-a;if(n.n<bl){bl=n.n;bass=n.n%12}}}));
-    const c=SMF.guessChord(w,bass);if(!c)continue;const r=chords.at(-1);if(r&&r[0]===c&&r[1]+r[2]===k)r[2]++;else chords.push([c,k,1])}
+  // T138 (21/11/2026): um acorde por meio compasso (4/4: 2 tempos; 3/4 e 6/8: o compasso inteiro), sem a melodia e sem bateria.
+  // Antes era um por tempo: as notas de enfeite viravam acordes (sus4, maj7) e havia trocas demais (Shape of You: 94 em vez de 72).
+  // Cada nota conta no máximo 1 tempo; a faixa que toca a música quase toda manda mais; a faixa de baixo dá a fundamental; o tom desempata.
+  const key=SMF.guessKey(tr),win=ts.num>=4&&ts.num%2===0?ts.num/2:ts.num,bassTr=others.filter(t=>/bass|baixo/i.test(nm_(t)));
+  const cov=new Map(others.map(t=>{const on=new Set(t.notes.map(n=>Math.floor(n.t/beat/win)));return [t,Math.max(.25,on.size/Math.max(1,Math.ceil(end/win)))]}));
+  for(let k=0;k<end;k+=win){const w=Array(12).fill(0);let bass=null,bl=999,bb=null,bbl=999;const len=Math.min(win,end-k);
+    others.forEach(t=>t.notes.forEach(n=>{const a=Math.max(n.t,k*beat),e=Math.min(n.t+n.d,(k+len)*beat);if(e>a){w[n.n%12]+=Math.min(e-a,beat)*(cov.get(t)||1);if(n.n<bl){bl=n.n;bass=n.n%12}
+      if(bassTr.includes(t)&&n.n<bbl){bbl=n.n;bb=n.n%12}}}));
+    const c=SMF.guessChord(w,bb??bass,key,bb!=null);if(!c)continue;const r=chords.at(-1);if(r&&r[0]===c&&r[1]+r[2]===k)r[2]+=len;else chords.push([c,k,len])}
+  // maior ou relativo menor: o primeiro acorde desempata (Faded começa em Ebm, não em F#)
+  let kname=key?key.name:'C';if(key&&chords.length){const f=chords[0][0],rel=key.minor?SMF.NM[(key.tonic+3)%12]:SMF.NM[(key.tonic+9)%12]+'m';
+    if(key.minor?(f===rel||(f.startsWith(rel)&&!/^m(?!aj)/.test(f.slice(rel.length)))):(f===rel||(f.startsWith(rel)&&!/^maj/.test(f.slice(rel.length)))))kname=rel}
   let phrases=m.markers.map((mk,i,a)=>({name:mk.text||('Frase '+(i+1)),from:Math.round(mk.tick/beat),to:a[i+1]?Math.round(a[i+1].tick/beat):end}));
   if(!phrases.length)for(let a=0,i=1;a<end;a+=2*ts.num,i++)phrases.push({name:'Frase '+i,from:a,to:Math.min(end,a+2*ts.num)});
   const sections=[];for(let a=0,i=1;a<end;a+=8*ts.num,i++)sections.push({name:'Parte '+i,from:a,to:Math.min(end,a+8*ts.num)});
   const fit=t=>{const ns=t.notes.map(n=>[n.n,+(n.t/beat).toFixed(3),+(n.d/beat).toFixed(3)]),l=Math.min(...ns.map(n=>n[0])),h=Math.max(...ns.map(n=>n[0])),x=[0,-12,12,-24,24].find(v=>l+v>=LO&&h+v<=HI)??0;return ns.map(n=>{let q=n[0]+x;while(q<LO)q+=12;while(q>HI)q-=12;return [q,n[1],n[2]]})};
   const alts={},tracks=[];m.tracks.forEach((t,i)=>{if(t.notes.length&&!t.channels.includes(9)){alts[i]=t===mel?notes:fit(t);tracks.push({i,name:t.name||('Faixa '+(i+1)),n:t.notes.length})}});
-  return {id:'mid-'+Date.now().toString(36),title:name,artist:'MIDI',key:'C',bpm,time:[ts.num,ts.den],melody:notes,chords,phrases,sections,shift:sh??0,tracks,alts,melTrack:m.tracks.indexOf(mel)}}
+  return {id:'mid-'+Date.now().toString(36),title:name,artist:'MIDI',key:kname,bpm,time:[ts.num,ts.den],melody:notes,chords,phrases,sections,shift:sh??0,tracks,alts,melTrack:m.tracks.indexOf(mel)}}
 let MINE=[];try{MINE=JSON.parse(localStorage.getItem('fm1songs')||'[]')}catch(e){MINE=[]}
 const MINE_N=MODS.length+1;
 const mineMod={id:'m7',name:MINE_N+' · Minhas músicas',sub:'Cifras importadas (ChordPro): só os acordes de cada seção',lessons:[]};
@@ -1560,7 +1588,7 @@ function pvPlay(from,to,evs,done){pvStop();ensureAudio();evs.sort((x,y)=>x.t-y.t
   const T={alive:true,stop(){this.alive=false;live.forEach(f=>f());live.clear()}};
   (function loop(){if(!T.alive)return;const now=performance.now();pos+=(now-last)/60000*PV.bpm;last=now;
     while(k<evs.length&&evs[k].t<=pos)evs[k++].fn(live);
-    if(pos>=to){T.stop();if(PV.tr===T)PV.tr=null;pvBarTxt();document.querySelectorAll('#pv .now,#pvBarsR .now').forEach(x=>x.classList.remove('now'));const b=document.getElementById('pvPlay');if(b&&b.dataset.lbl){b.innerHTML=b.dataset.lbl;delete b.dataset.lbl}done&&done();return}setTimeout(loop,8)})();
+    if(pos>=to){T.stop();if(PV.tr===T){PV.tr=null;PV.pos=null}pvBarTxt();document.querySelectorAll('#pv .now,#pvBarsR .now').forEach(x=>x.classList.remove('now'));const b=document.getElementById('pvPlay');if(b&&b.dataset.lbl){b.innerHTML=b.dataset.lbl;delete b.dataset.lbl}done&&done();return}setTimeout(loop,8)})();
   PV.tr=T;const b=document.getElementById('pvPlay');if(b){b.dataset.lbl=b.innerHTML;b.innerHTML=IC.stop+'Parar'}}
 let pvK=0;
 // Figma 177:27349: a música toca no FM-1 (se conectado) e, com SOM DO COMPUTADOR ON, também no computador
@@ -1570,16 +1598,22 @@ function pvSound_(n,vel){const out=M.out;if(out){try{out.send([0x90,n,vel]);evFm
 // um acontecimento com começo e fim: o fim já entra na fila, ordenado (nada fica tocando)
 function pvEv(list,t,dur,on){const h={f:null};list.push({t,fn:live=>{let g=false;const off=on();h.f=()=>{if(g)return;g=true;off&&off();live.delete(h.f)};live.add(h.f)}});list.push({t:t+dur,fn:()=>h.f&&h.f()})}
 function pvMelody(a,b,list){const ns=fmOf(S.lesson).melody.filter(m=>m[1]>=a&&m[1]<b);
-  ns.forEach(([n,st,d],i)=>pvEv(list,st,d*.92,()=>{pvLive(st,n);for(const m in keyEl)keyEl[m].classList.remove('cue','next','lit');keyEl[n]&&keyEl[n].classList.add('cue','lit');pvMapNow(nm(n),st);const nx=ns[i+1];if(nx&&nx[0]!==n&&keyEl[nx[0]])keyEl[nx[0]].classList.add('next');
+  ns.forEach(([n,st,d],i)=>pvEv(list,st,d*.92,()=>{pvLive(st,n);for(const m in keyEl)keyEl[m].classList.remove('cue','next','lit','root');keyEl[n]&&keyEl[n].classList.add('cue','lit');pvMapNow(nm(n),st);const nx=ns[i+1];if(nx&&nx[0]!==n&&keyEl[nx[0]])keyEl[nx[0]].classList.add('next');
     const sw=document.getElementById('pvSt');if(sw){const sg=fmOf(S.lesson),fr=sg.phrases.find(f=>st>=f.from&&st<f.to),tb=Math.ceil(songEnd(sg)/sg.time[0]);sw.textContent='Tocando · '+(fr?fr.name+' · ':'')+'compasso '+(Math.floor(st/sg.time[0])+1)+' de '+tb+' · '+PV.bpm+' BPM'}
     {const sg=fmOf(S.lesson),fr=sg.phrases.find(f=>st>=f.from&&st<f.to);fmScr({name:nm(n),detail:'NOTA '+(i+1)+' DE '+ns.length,next:fmNext(nx&&nm(nx[0])),foot:(fr?fr.name+' - ':'')+'COMPASSO '+(Math.floor(st/sg.time[0])+1)+' - '+PV.bpm+' BPM'})}const off=pvSound(n,96);return()=>{off&&off();keyEl[n]&&keyEl[n].classList.remove('cue','lit')}}))}
-function pvChords(a,b,list,lights){const s=fmOf(S.lesson),flat=/b|^F|^Dm|^Gm|^Cm/.test(s.key||S.lesson.sub.split('tom ')[1]||'C');
+/* T124: na vista MIDI, um acorde que soa onde a melodia ainda não começou (introdução) ou para (trecho só de acordes)
+   acende as teclas e manda a tela do FM-1 (litIf); antes, até a 1ª nota da melodia o FM-1 ficava sem luz e sem tela */
+function pvChords(a,b,list,lights,litIf){const s=fmOf(S.lesson),flat=/b|^F|^Dm|^Gm|^Cm/.test(s.key||S.lesson.sub.split('tom ')[1]||'C');
   s.chords.filter(c=>c[1]>=a&&c[1]<b).forEach(c=>{let ch;try{ch=chord(c[0],'',flat)}catch(e){return}
-    pvEv(list,c[1],c[2]*.95,()=>{pvChordNow(cifra(c[0]));document.querySelectorAll('#pv [data-ci].now').forEach(x=>x.classList.remove('now'));const el=document.querySelector(`#pv [data-ci="${s.chords.indexOf(c)}"]`);if(el)el.classList.add('now');pvMapNow(cifra(c[0]));
+    const vis=lights||!!(litIf&&litIf(c));
+    pvEv(list,c[1],c[2]*.95,()=>{pvChordNow(cifra(c[0]));if(vis&&!lights)pvLive(c[1],null);document.querySelectorAll('#pv [data-ci].now').forEach(x=>x.classList.remove('now'));const el=document.querySelector(`#pv [data-ci="${s.chords.indexOf(c)}"]`);if(el)el.classList.add('now');pvMapNow(cifra(c[0]));
       const ns=lights?ch.notes:ch.notes.map(n=>n-12>=LO?n-12:n),offs=ns.map(n=>pvSound(n,lights?90:55));
-      if(lights){ch.notes.forEach(n=>keyEl[n].classList.add(n===ch.root?'root':'cue','lit'));const ci=s.chords.indexOf(c),nx=s.chords[ci+1],[ra]=pvRange(),bt=s.time[0];
-        fmScr({name:cifra(c[0]),detail:ch.notes.map(nm).join(' - '),next:fmNext(nx&&nx[1]<b&&cifra(nx[0])),foot:'COMPASSO '+(Math.floor((c[1]-ra)/bt)+1)+' DE '+Math.max(1,Math.ceil((b-ra)/bt))+' - '+PV.bpm+' BPM'})}
-      return()=>{offs.forEach(o=>o&&o());if(lights)ch.notes.forEach(n=>keyEl[n].classList.remove('cue','root','lit'))}})})}
+      if(vis){ch.notes.forEach(n=>keyEl[n]&&keyEl[n].classList.add(n===ch.root?'root':'cue','lit'));const ci=s.chords.indexOf(c),nx=s.chords[ci+1],[ra]=pvRange(),bt=s.time[0];
+        let next=nx&&nx[1]<b&&cifra(nx[0]),foot='COMPASSO '+(Math.floor((c[1]-ra)/bt)+1)+' DE '+Math.max(1,Math.ceil((b-ra)/bt))+' - '+PV.bpm+' BPM';
+        if(!lights){const m1=s.melody.find(m=>m[1]>=c[1]+c[2]&&m[1]<b),intro=!s.melody.some(m=>m[1]<c[1]&&m[1]>=a);   // depois do acorde: outro acorde sem melodia, ou a 1ª nota
+          if(m1&&(!nx||nx[1]>=m1[1]))next=nm(m1[0]);foot=(intro?'INTRO':'ACORDES')+' - COMPASSO '+(Math.floor(c[1]/bt)+1)+' - '+PV.bpm+' BPM'}
+        fmScr({name:cifra(c[0]),detail:ch.notes.map(nm).join(' - '),next:fmNext(next),foot})}
+      return()=>{offs.forEach(o=>o&&o());if(vis)ch.notes.forEach(n=>keyEl[n]&&keyEl[n].classList.remove('cue','root','lit'))}})})}
 // T78: durante o Tocar, o mapa da esquerda acompanha o acorde que soa (contorno na miniatura; em Slides, o slide passa junto)
 /* T123 (Figma 270:135600 Arranjo, 279:98603 Notas da frase): a vista MIDI em duas abas. Arranjo: as partes, os compassos
    (os tocados escuros, o atual amarelo) e os acordes sem repetir; Notas da frase: as notas da frase que toca, em mini
@@ -1606,19 +1640,24 @@ function pvMidiHTML(){const L=S.lesson,s=fmOf(L),[a,b]=pvRange(),sec=L.parts[S.p
     <div class="pchips" id="fold-ac"${(CFG.fold||{}).ac?' hidden':''}>${uq.map(u=>`<span data-cu="${u}"${u===PV.chordNow?' class="now"':''}>${u}</span>`).join('')||'<span>sem acordes</span>'}</div>
     ${cs.length?`<details class="seqd"><summary>${FOLD_CH}Ver a sequência completa (${cs.length})</summary><div class="pchips">${cs.map(c=>`<span data-ci="${s.chords.indexOf(c)}">${cifra(c[0])}</span>`).join('')}</div></details>`:''}</div>`}
 function pvFrHTML(){const s=fmOf(S.lesson),ph=pvPhrases();if(PV.fcur>=ph.length)PV.fcur=0;const f=ph[PV.fcur];if(!f)return'<div id="pvFr"></div>';
-  const ms=s.melody.filter(m=>m[1]>=f.from&&m[1]<f.to),g=CFG.cmap==='grade',uq=[...new Set(ms.map(m=>m[0]))].sort((x,y)=>x-y),p=PV.pos;
+  const ms=s.melody.filter(m=>m[1]>=f.from&&m[1]<f.to);if(!ms.length)return pvFrChords(f,ph);const g=CFG.cmap==='grade',uq=[...new Set(ms.map(m=>m[0]))].sort((x,y)=>x-y),p=PV.pos;
   const head=`<div class="cmh"><div class="lbl" style="margin:0">As ${uq.length} nota${uq.length===1?'':'s'} da ${String(f.name).toLowerCase()} · <button type="button" class="fnav" data-act="pfrn:prev"${PV.fcur?'':' disabled'} aria-label="Frase anterior">${FOLD_CH}</button> Frase ${PV.fcur+1} de ${ph.length} <button type="button" class="fnav" data-act="pfrn:next"${PV.fcur<ph.length-1?'':' disabled'} aria-label="Próxima frase">${FOLD_CH}</button></div>
     <div class="seg seg-s" role="tablist" aria-label="Vista das notas"><button role="tab" type="button" aria-selected="${!g}" data-act="cmap:slides">Slides</button><button role="tab" type="button" aria-selected="${g}" data-act="cmap:grade">Grade</button></div></div>`;
   let body;
   if(g)body=`<div class="cgrid frow" id="pvFrRow">${uq.map(n=>`<button type="button" data-act="fnote:${n}" data-fn="${n}"${p&&p.n===n?' class="now"':''} title="Tocar ${nm(n)}"><div class="cg-h"><b>${nm(n)}</b></div>${miniKb({notes:[n],root:null})}</button>`).join('')}</div>`;
   else{const j=Math.max(0,p?ms.findIndex(m=>m[1]===p.st):0),m=ms[j]||ms[0];body=m?`<div class="cslide${p?' now':''}" id="pvFrSl"><div class="cs-h"><b>${nm(m[0])}</b><span class="mut">nota ${j+1} de ${ms.length} da frase</span></div>${miniKb({notes:[m[0]],root:null})}</div>`:''}
   return `<div id="pvFr">${head}${body}<div class="pvnow" id="pvNow">Toque junto: a tecla acesa toca agora; a fraca é a seguinte.</div><div class="pvbar off" id="pvBar"></div></div>`}
-function pvFrNow(){const p=PV.pos;if(!p)return;
+function pvFrChords(f,ph){const s=fmOf(S.lesson),flat=/b|^F|^Dm|^Gm|^Cm/.test(s.key||S.lesson.sub.split('tom ')[1]||'C'),uq=[];
+  s.chords.filter(c=>c[1]>=f.from&&c[1]<f.to).forEach(c=>{const l=cifra(c[0]);if(!uq.some(u=>u[0]===l)){let ch;try{ch=chord(c[0],'',flat)}catch(e){return}uq.push([l,ch])}});
+  return `<div id="pvFr"><div class="cmh"><div class="lbl" style="margin:0">${uq.length} acorde${uq.length===1?'':'s'} da ${String(f.name).toLowerCase()} (sem melodia) · <button type="button" class="fnav" data-act="pfrn:prev"${PV.fcur?'':' disabled'} aria-label="Frase anterior">${FOLD_CH}</button> Frase ${PV.fcur+1} de ${ph.length} <button type="button" class="fnav" data-act="pfrn:next"${PV.fcur<ph.length-1?'':' disabled'} aria-label="Próxima frase">${FOLD_CH}</button></div></div>
+    <div class="cgrid frow" id="pvFrRow">${uq.map(([l,ch])=>`<button type="button" data-cu="${l}"${l===PV.chordNow?' class="now"':''}><div class="cg-h"><b>${l}</b><span class="mut" style="font-size:12px">${chordName(Object.assign({sym:l},ch))}</span></div>${miniKb(ch)}</button>`).join('')}</div>
+    <div class="pvnow" id="pvNow">Só acordes nesta frase: a melodia começa depois.</div><div class="pvbar off" id="pvBar"></div></div>`}
+function pvFrNow(){const p=PV.pos;if(!p||p.n==null)return;
   if(CFG.cmap==='grade'){const row=document.getElementById('pvFrRow');if(!row)return;row.querySelectorAll('button.now').forEach(x=>x.classList.remove('now'));const c=row.querySelector(`[data-fn="${p.n}"]`);if(c){pvBlink(c);row.scrollLeft=Math.max(0,c.offsetLeft-row.clientWidth/2+c.offsetWidth/2)}}
   else{const sl=document.getElementById('pvFrSl');if(!sl)return;const t=document.createElement('div');t.innerHTML=pvFrHTML();const ns=t.querySelector('#pvFrSl');if(ns){sl.replaceWith(ns);pvBlink(ns)}}}
 function pvArrNow(){const p=PV.pos,st=document.getElementById('pvStrip');if(!st||!p)return;[...st.children].forEach((x,k)=>{x.classList.toggle('done',k<p.bar);x.classList.toggle('cur',k===p.bar)});const h=document.getElementById('pvHd');if(h)h.textContent=pvHdTxt()}
 function pvChordNow(lab){PV.chordNow=lab;document.querySelectorAll('#pv [data-cu]').forEach(x=>x.classList.toggle('now',x.dataset.cu===lab))}
-function pvBarTxt(){const el=document.getElementById('pvBar');if(!el)return;const L=S.lesson,ph=pvPhrases(),p=PV.pos,on=!!(PV.tr&&p),pp=p&&pvParts()[p.pi],tot=pvBars(L.parts[S.part]);
+function pvBarTxt(){const el=document.getElementById('pvBar');if(!el)return;const L=S.lesson,ph=pvPhrases(),p=PV.pos,on=!!p,pp=p&&pvParts()[p.pi],tot=pvBars(L.parts[S.part]);
   el.className='pvbar'+(on?'':' off');el.innerHTML='<span class="dot"></span>'+(on?['Tocando',pvParts().length>1&&pp?pp.name:'','Frase '+(PV.fcur+1)+' de '+ph.length,'Compasso '+(p.bar+1)+' de '+tot,PV.bpm+' BPM']:['Parado','Frase '+(PV.fcur+1)+' de '+ph.length,tot+' compassos',PV.bpm+' BPM']).filter(Boolean).join(' · ').toUpperCase()}
 function pvMapNow(label,st){if(document.getElementById('pvArr')||document.getElementById('pvFr'))return;const cs=cmapItems();if(cs.length&&!!cs[0].note!==(st!==undefined))return;const ci=st!==undefined&&CFG.cmap!=='grade'?cs.findIndex(x=>x.st===st):cs.findIndex(x=>x.label===label);document.querySelectorAll('#pv .cgrid button.now,#pv .cslide.now').forEach(x=>x.classList.remove('now'));if(ci<0)return;
   const gb=document.querySelectorAll('#pv .cgrid button')[ci];if(gb){pvBlink(gb);return}
@@ -1639,7 +1678,7 @@ function pvAct(a,x){const L=S.lesson,s=fmOf(L),[ra,rb]=pvRange();
   else if(a==='cslide'){const n=cmapItems().length;PV.slide=x==='prev'?Math.max(0,PV.slide-1):x==='next'?Math.min(n-1,PV.slide+1):+x;if(x!=='prev'&&x!=='next'){CFG.cmap='slides';save('fm1s',CFG)}pvRender()}
   else if(a==='pvopt'){const k={ch:'pvCh',met:'pvMet',metA:'pvMetA'}[x],def=x==='met'?false:true;CFG[k]=!(CFG[k]===undefined?def:CFG[k]);save('fm1s',CFG);const b=document.querySelector('[data-act="pvopt:'+x+'"]');if(b)b.setAttribute('aria-pressed',String(CFG[k]))}   // T119: sem redesenhar a página: a música continua
   else if(a==='bpm'){if(x==='m')PV.setB(PV.bpm-1);else if(x==='p')PV.setB(PV.bpm+1);else if(x==='o')PV.setB(s.bpm);else if(x==='t'){const b=pvTap();if(b)PV.setB(b)}}
-  else if(a==='pvmidi'){if(PV.tr){pvStop();return}const ev=[];pvMelody(ra,rb,ev);if(CFG.pvCh!==false)pvChords(ra,rb,ev,false);else fmOf(L).chords.filter(c=>c[1]>=ra&&c[1]<rb).forEach(c=>ev.push({t:c[1],fn:()=>pvMapNow(cifra(c[0]))}));pvMetro(ra,rb,ev,s.time[0],()=>!!CFG.pvMet);pvPlay(ra,rb,ev)}
+  else if(a==='pvmidi'){if(PV.tr){pvStop();return}const ev=[];pvMelody(ra,rb,ev);const noMel=c=>!s.melody.some(m=>m[1]<c[1]+c[2]/2&&m[1]+m[2]>c[1]);/* a melodia não soa na 1ª metade do acorde */if(CFG.pvCh!==false)pvChords(ra,rb,ev,false,noMel);else fmOf(L).chords.filter(c=>c[1]>=ra&&c[1]<rb).forEach(c=>ev.push({t:c[1],fn:()=>pvMapNow(cifra(c[0]))}));pvMetro(ra,rb,ev,s.time[0],()=>!!CFG.pvMet);pvPlay(ra,rb,ev)}
   else if(a==='pvchords'){if(PV.tr){pvStop();return}const ev=[],bt=s.time[0],a0=Math.floor(ra/bt)*bt;pvChords(ra,rb,ev,true);pvMetro(a0,rb,ev,bt,()=>CFG.pvMetA!==false);pvBeats(a0,rb,ev,bt);pvPlay(a0,rb,ev)}
   else if(a==='pfr'){pvStop();PV.fcur=+x;openSong(L)}
   else if(a==='pvhear'){if(PV.tr){pvStop();return}const f=pvPhrases()[PV.fcur];if(!f)return;const ev=[];pvMelody(f.from,f.to,ev);pvChords(f.from,f.to,ev,false);pvPlay(f.from,f.to,ev,()=>{const w=$('#pvNow');if(w)w.textContent='Agora você: toque Praticar.'})}
@@ -1908,6 +1947,36 @@ $('#cpfile').addEventListener('change',async e=>{const fs=[...(e.target.files||[
 applyCfg();home();voiceLabel();
 // Se o FM-1 já foi conectado antes, reconecta ao abrir (o Chrome lembra a permissão de MIDI).
 if(CFG.inName&&navigator.requestMIDIAccess)midiConnect();
+
+/* T140: lista própria para todo <select> (o menu nativo do navegador não aceita o estilo). O <select> continua sendo a fonte:
+   escolher aqui muda o value e dispara change, então o resto do app não muda */
+(()=>{let M2=null;const close=f=>{if(!M2)return;const s=M2.sel;M2.el.remove();M2=null;if(f)s.focus()};
+  const pick=(s,v)=>{close(true);if(s.value!==v){s.value=v;s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}))}};
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // a lista não passa pelo tradutor automático (trocaria Dó Ré Mi por C D E); traduz aqui só o que é texto: grupos e o que vem entre parênteses
+  const CT={en:{'Anglo-saxônica':'Anglo-Saxon','Solmização':'Solfège','Graus':'Scale degrees','maiúsculas':'uppercase','algarismos romanos':'Roman numerals','sistema nashville':'Nashville system'},
+    es:{'Anglo-saxônica':'Anglosajona','Solmização':'Solmisación','Graus':'Grados','maiúsculas':'mayúsculas','algarismos romanos':'números romanos','sistema nashville':'sistema Nashville'}};
+  const lg=()=>typeof LANG==='string'?LANG:'pt',ct=t=>(CT[lg()]||{})[t]||t,isC=s=>s.id==='cifra'||s.id==='ajCifra';
+  const txt=(s,t)=>lg()==='pt'||s.id==='lang'?t:isC(s)?t.replace(/\(([^)]*)\)/,(_,x)=>'('+ct(x)+')'):(typeof tr==='function'?tr(t):t);
+  function open(s){close();const el=document.createElement('div');el.className='ptm';el.setAttribute('role','listbox');el.setAttribute('aria-label',s.getAttribute('aria-label')||'');
+    const ck=(typeof IC!=='undefined'&&IC.ok)||'';let h='';
+    [...s.children].forEach(n=>{const os=n.tagName==='OPTGROUP'?(h+=`<div class="ptm-g" role="presentation">${esc(isC(s)?ct(n.label):txt(s,n.label))}</div>`,[...n.children]):[n];
+      os.forEach(o=>{const on=o.value===s.value;h+=`<button type="button" class="ptm-o${on?' on':''}" role="option" aria-selected="${on}" data-v="${esc(o.value)}"${o.disabled?' disabled':''}${o.title?` title="${esc(o.title)}"`:''}><span class="ptm-c">${on?ck:''}</span>${esc(txt(s,o.textContent))}</button>`})});
+    el.innerHTML=h;document.body.appendChild(el);M2={el,sel:s};
+    const r=s.getBoundingClientRect(),W=innerWidth,H=innerHeight;el.style.minWidth=Math.max(160,r.width)+'px';
+    const w=el.offsetWidth,ht=el.offsetHeight;let x=Math.min(r.left,W-w-8),y=r.bottom+6;if(y+ht>H-8&&r.top-ht-6>8)y=r.top-ht-6;
+    el.style.left=Math.max(8,x)+'px';el.style.top=Math.max(8,Math.min(y,H-ht-8))+'px';
+    const cur=el.querySelector('.ptm-o.on')||el.querySelector('.ptm-o:not(:disabled)');if(cur){cur.focus();cur.scrollIntoView({block:'nearest'})}
+    el.addEventListener('click',e=>{const b=e.target.closest('.ptm-o');if(b&&!b.disabled)pick(s,b.dataset.v)});
+    el.addEventListener('keydown',e=>{const bs=[...el.querySelectorAll('.ptm-o:not(:disabled)')],i=bs.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=bs[(i+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length];n&&n.focus()}
+      else if(e.key==='Home'||e.key==='End'){e.preventDefault();(e.key==='Home'?bs[0]:bs[bs.length-1]).focus()}
+      else if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();close(true)}});
+    el.addEventListener('focusin',e=>{el.querySelectorAll('.hi').forEach(b=>b.classList.remove('hi'));const b=e.target.closest('.ptm-o');b&&b.classList.add('hi')})}
+  document.addEventListener('mousedown',e=>{const s=e.target.closest&&e.target.closest('select');if(s&&!s.disabled&&!s.multiple){e.preventDefault();if(M2&&M2.sel===s)close();else{s.focus();open(s)}}
+    else if(M2&&!e.target.closest('.ptm'))close()},true);
+  document.addEventListener('keydown',e=>{const s=e.target;if(s&&s.tagName==='SELECT'&&!s.disabled&&(e.key==='Enter'||e.key===' '||(e.key==='ArrowDown'&&e.altKey)||e.key==='F4')){e.preventDefault();open(s)}},true);
+  addEventListener('resize',()=>close());document.addEventListener('scroll',e=>{if(M2&&!M2.el.contains(e.target))close()},true)})();
 </script>
 </body>
 </html>
