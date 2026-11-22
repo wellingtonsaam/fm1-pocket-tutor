@@ -556,6 +556,47 @@ def tutor_cases():
     run("tutor_off", keys(1500, tutor_frame(0, 0, 0, texts)) + ",2000:mbf7b00", 2600)
     o = tutor_px("tutor_off", *A3)
     check("tutor_off", not near(o, YEL), f"CC 123 on the guide channel: the tutor's screen gone (A3 at {o})")
+    # T162: a frame that changes a field draws that field again, not the whole screen: wrong (a red band), then the
+    # next chord (no flag): the band gone, the new name drawn, the keys the new guide's
+    nxt = ["FM6 - TINE EP", "D", "D4 - F#4 - A4", "PROXIMO: E", "COMPASSO 2 DE 8 - 90 BPM", ""]
+    run("tutor_partial", keys(1500, tutor_frame(0, 0, 0, texts)) + f",1800:m{tutor_frame(0, 2, 65, texts[:5] + ['FORA DO ACORDE: F4']).hex()}"
+        + ",2100:m8f3600,2100:m8f3900,2100:m8f3d00,2100:m9f3e7f,2100:m9f4264,2100:m9f4564"
+        + f",2150:m{tutor_frame(0, 0, 0, nxt).hex()}", 2600)
+    pp = [tutor_px("tutor_partial", *q) for q in ((120, 220), F4, A3, D4)]
+    check("tutor_partial", near(pp[0], (0, 0, 0)) and near(pp[1], KEY) and near(pp[2], KEY) and near(pp[3], YEL),
+          f"wrong, then the next chord: the band gone, F4 white again, A3 off, D4 lit: {pp}")
+    tutor_no_blink()
+
+
+def tutor_no_blink():
+    """T162: a song played (a note and a frame every 250 ms), the LCD timed as on an FM-1, a frame every 16 ms: the
+    foot (the same text), the name and the keys never black (the screen used to be cleared and drawn again)"""
+    import dock
+    def fr(name, detail, nx):
+        return tutor_frame(0, 0, 0, ["FM6 - TINE EP", name, detail, nx, "MUSICA X - 90 BPM", ""])
+    notes = [60, 62, 64, 65, 67, 69, 71, 72, 71, 69]
+    ev, prev, t = [], None, 1500
+    for i, n in enumerate(notes):
+        if prev:
+            ev.append(f"{t}:m8f{prev:02x}00")
+        ev += [f"{t}:m9f{n:02x}64", f"{t + 5}:m{fr(f'NOTA {n}', f'TOCANDO {i + 1} DE 10', f'A SEGUIR: {notes[(i + 1) % 10]}').hex()}"]
+        prev, t = n, t + 250
+    with tempfile.TemporaryDirectory() as wd:
+        (Path(wd) / "work").mkdir()
+        rec = Path(wd) / "rec"
+        env = dict(os.environ, FM1_BENCH_KEYS=",".join(ev), FM1_LCD_TIMED="1")
+        subprocess.run([str(dock.live()), "--bin", str(APP), "--shot", str(t + 300), "--record", str(rec), "--lcd-only"],
+                       cwd=wd, env=env, capture_output=True, text=True, check=True)
+        def lit(px, y0, y1):
+            return any(px[(y * 240 + x) * 3 + c] > 40 for y in range(y0, y1) for x in range(240) for c in range(3))
+        gone = [0, 0, 0]
+        frames = sorted(rec.glob("*.ppm"))[1800 // 16:]
+        for f in frames:
+            px = f.read_bytes().split(b"\n", 3)[3]
+            for i, (y0, y1) in enumerate(((186, 200), (46, 78), (100, 164))):
+                gone[i] += not lit(px, y0, y1)
+    check("tutor_no_blink", len(frames) > 100 and gone == [0, 0, 0],
+          f"a song played, {len(frames)} frames of 16 ms: the foot, the name and the keys black in {gone} of them")
 
 
 def niagara_cases():

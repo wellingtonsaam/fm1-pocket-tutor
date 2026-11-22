@@ -1326,6 +1326,9 @@ static void draw_top(int32_t oct)
 #define TU_BAD RGB(255, 107, 107)
 static uint32_t tu_drawn[3] __attribute__((section(".noinit"))), tu_shown __attribute__((section(".noinit")));
 
+#define TU_DKEYS 0x40u                          /* tu.dirty: bit k field k, the keys (mode, flag, the wrong key), */
+#define TU_DBAND 0x80u                          /* the band (the flag); all: the whole screen                      */
+#define TU_DALL 0xFFu
 static void tu_frame(const uint8_t *p, uint32_t n)   /* p: 7D 50 54 <cmd> ... (no F0, no F7) */
 {
     uint32_t i, k = 0, j = 0;
@@ -1337,12 +1340,9 @@ static void tu_frame(const uint8_t *p, uint32_t n)   /* p: 7D 50 54 <cmd> ... (n
     }
     if (p[3] != 1u || n < 7u)
         return;
-    tu.mode = p[4];
-    tu.flag = p[5];
-    tu.bad = p[6] >= GUIDE_LO && p[6] < GUIDE_LO + 27u ? p[6] : 0;
-    if (tu.flag == 1u)
-        tu.snap = g_lit | g_blink;              /* right: the keys asked, in green (the app clears their LEDs) */
-    memset(tu.f, 0, sizeof tu.f);
+    char f[TU_F][TU_L];
+    uint32_t bad = p[6] >= GUIDE_LO && p[6] < GUIDE_LO + 27u ? p[6] : 0, d = 0;
+    memset(f, 0, sizeof f);
     for (i = 7; i < n && k < TU_F; i++) {
         if (!p[i]) {
             k++;
@@ -1350,10 +1350,27 @@ static void tu_frame(const uint8_t *p, uint32_t n)   /* p: 7D 50 54 <cmd> ... (n
             continue;
         }
         if (j < TU_L - 1u)
-            tu.f[k][j++] = (char)(p[i] >= 32u && p[i] <= 126u ? p[i] : '?');
+            f[k][j++] = (char)(p[i] >= 32u && p[i] <= 126u ? p[i] : '?');
     }
+    /* T162: only what changed is drawn again (a field, the keys, the band), never the whole screen: a frame comes
+     * with every note while a song plays, and the screen cleared to black and drawn again top to bottom blinked */
+    for (k = 0; k < TU_F; k++)
+        if (memcmp(f[k], tu.f[k], TU_L))
+            d |= 1u << k;
+    if (p[4] != tu.mode || bad != tu.bad || p[5] != tu.flag || p[5] == 1u)
+        d |= TU_DKEYS;
+    if (p[5] != tu.flag)
+        d |= TU_DBAND;
+    tu.mode = p[4];
+    tu.flag = p[5];
+    tu.bad = (uint8_t)bad;
+    if (tu.flag == 1u)
+        tu.snap = g_lit | g_blink;              /* right: the keys asked, in green (the app clears their LEDs) */
+    memcpy(tu.f, f, sizeof f);
+    if (!tu.on)
+        d = TU_DALL;
     tu.on = 1;
-    tu.dirty = 1;
+    tu.dirty |= (uint8_t)d;
 }
 
 static int tu_black(uint32_t note) { return (0x54Au >> (note % 12u)) & 1u; }
@@ -1431,14 +1448,20 @@ static void tu_legend(uint32_t y)               /* advanced: [lilac] FUNDAMENTAL
     }
     cv_blit(0, y);
 }
-static void tu_draw(uint32_t full)              /* below the host's bar; the keys again when the guide changes */
+static void tu_draw(uint32_t full)              /* below the host's bar; what changed, the keys when the guide does */
 {
-    if (full || tu.dirty) {
+    uint32_t d = full || tu.dirty == TU_DALL ? TU_DALL : tu.dirty;
+    if (d == TU_DALL)
         lcd_fill(0, HB_TOP, 240, 240 - HB_TOP, C_BLACK);
+    if (d & 1u)
         draw_text_box(0, 28, 240, &FONT_S, tu.f[0], TU_ORANGE, 1);
+    if (d & 2u)
         tu_name(46);
+    if (d & 4u)
         draw_text_box(0, 80, 240, &FONT_S, tu.f[2], TU_GRAY, 1);
+    if (d & 16u)
         draw_text_box(0, 186, 240, &FONT_S, tu.f[4], TU_GRAY, 1);
+    if (d & (TU_DBAND | 32u)) {                 /* the band: its own colour, or gone (black) */
         if (tu.flag) {
             uint16_t bg = tu.flag == 1u ? TU_OK : TU_BAD;
             int32_t w = text_w(&FONT_S, tu.f[5]);
@@ -1446,10 +1469,11 @@ static void tu_draw(uint32_t full)              /* below the host's bar; the key
             cv_begin(240, FONT_S.h, bg);
             cv_text((240 - w) / 2, 0, &FONT_S, tu.f[5], C_BLACK);
             cv_blit(0, 212);
-        }
+        } else if (d != TU_DALL)
+            lcd_fill(0, 208, 240, 24, C_BLACK);
     }
-    if (full || tu.dirty || g_lit != tu_drawn[0] || g_glow != tu_drawn[1] || g_blink != tu_drawn[2]) {
-        tu_keys(100);
+    if (d & (TU_DKEYS | 8u) || g_lit != tu_drawn[0] || g_glow != tu_drawn[1] || g_blink != tu_drawn[2]) {
+        tu_keys(100);                           /* (one strip, drawn off screen: one blit, no black between) */
         if (tu.mode)
             tu_legend(166);
         else
@@ -1852,6 +1876,14 @@ static uint32_t dp_place(uint32_t need, uint32_t *largest, uint32_t *total)   /*
 #endif
 enum { IN_FMT = 1, IN_BOARD, IN_CPU1, IN_RST, IN_BT, IN_ADDR, IN_FLASH = 12, IN_FREE = 16, IN_BIG = 20, IN_RAM = 24,
        IN_USED = 28, IN_MHZ = 32, IN_SOC = 36, IN_VER = 44, IN_BUILD = 60, IN_MODEL = 72, IN_LEN = 88 };
+/* T158: the firmware's own name in app.bin, for the tools that read a unit's flash (M-Flasher +: its panel and the
+ * backup's file name): "FWNAME=" the name and the version, NUL-ended, at most 48 characters (docs: M-Flasher +
+ * docs/firmware-names.md). The identity (FELUCCA_ID) stays what installers check; this is only what to call it. */
+#ifndef FW_NAME
+#define FW_NAME "FM1 Pocket Tutor"
+#endif
+__attribute__((used)) static const char fw_name_tag[] = "FWNAME=" FW_NAME " " APP_VER;
+typedef char fw_name_fits[sizeof fw_name_tag - 7u <= 49u ? 1 : -1];
 typedef char in_fits[sizeof APP_VER <= 16u && sizeof APP_BUILD <= 12u && sizeof AB_BOARD <= 16u ? 1 : -1];
 static char *put_s(char *p, const char *s) { while ((*p = *s++) != 0) p++; return p; }
 static void info_fill(uint8_t *b)               /* [0] the status, then the record (IN_*) */
