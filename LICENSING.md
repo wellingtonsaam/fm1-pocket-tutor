@@ -1,5 +1,24 @@
 # Licensing
 
+## FM1 Pocket Tutor: which licence covers which part
+
+FM1 Pocket Tutor has two parts with different licences. Since 23 November 2026:
+
+| Part | Files | Licence |
+| --- | --- | --- |
+| The FM-1 firmware: fm1-dock (below) with the Pocket Tutor's changes | `firmware/`, `modules/`, `tools/` (except `tools/vercel/`), the `.fwsc` packages | GPL-3.0-only (`LICENSE`) |
+| The installer page and its scripts | `docs/instalar-firmware.html`, `docs/install/`, `docs/dock.js`, the generated `install/fm1install-classico.js`, `install/pacote-fm1.js` and `install/pacote-fm1-info.js` | GPL-3.0-only (`LICENSE`); Felucca's update by Leo Kuroshita, Hügelton Instruments, and fm1-dock's protocol by Joakim Eriksson |
+| The web app: lessons, song catalogue, screens, texts and design | `docs/prototipo-aulas.html`, `docs/spikes/smf.js`, `docs/spikes/brilha.js`, `tools/vercel/` | Copyright (C) 2026 Wellington Saam. All rights reserved. Not free software: do not copy, change or redistribute it without permission |
+
+- The web app does not use the installer's GPL code. It talks to the FM-1 with its own code (`PTDock` in `docs/prototipo-aulas.html`) and only links to the installer page.
+- The firmware's complete source is in this repository: <https://github.com/wellingtonsaam/fm1-pocket-tutor>.
+- Versions of `docs/prototipo-aulas.html` published in this repository before 23 November 2026 were under the repository's GPL-3.0 and stay so. The notice above covers the versions from that date on.
+- Songs by other authors keep their own rights. Fonts in the web app (Public Sans, Space Mono, Lexend Mega) are SIL OFL 1.1, their licences beside them in `pwa/fonts/`.
+
+**Em português:** o firmware e o instalador são GPL-3.0-only. O app web (aulas, catálogo, telas, textos e design) é © 2026 Wellington Saam, todos os direitos reservados. Versões do app publicadas aqui antes de 23/11/2026 continuam GPL-3.0.
+
+## fm1-dock
+
 fm1-dock is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
 `LICENSE`). You may use, study, change and share it. If you give someone a firmware built from it, give them its
 complete source under the same licence too.

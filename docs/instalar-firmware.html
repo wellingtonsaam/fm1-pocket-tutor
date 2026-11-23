@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flash FM1 · FM1 Pocket Tutor</title>
+<!-- T150 (caminho B dos wireframes, Figma 315:251): a página só da gravação do firmware no FM-1, pelo Web MIDI com SysEx
+     (o protocolo do Felucca, docs/install/). Abre por file:// como o app: o instalador e o pacote vêm em scripts clássicos
+     gerados por tools/web_install_bundle.py e tools/web_fw.py. Nada é gravado sem a caixa marcada e GRAVAR NO FM-1. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend+Mega:wght@700;900&family=Public+Sans:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme=claro]{--pt-color-bg-app:#FFF4DC;--pt-color-surface-card:#FFFFFF;--pt-color-surface-empty:#F3EAD3;--pt-color-ink-primary:#000000;--pt-color-ink-muted:#4A4A4A;
+ --pt-color-ink-on-accent:#000000;--pt-color-border-default:#000000;--pt-color-shadow-default:#000000;--pt-color-accent-primary:#FFE500;--pt-color-accent-tab:#7DF9FF;
+ --pt-color-accent-brand:#FF4911;--pt-color-status-ok:#90EE90;--pt-color-status-warn:#FF9B71;--pt-color-status-bad:#FF6B6B;
+ --pt-font-head:"Lexend Mega",system-ui,sans-serif;--pt-font-body:"Public Sans",system-ui,sans-serif;--pt-font-mono:"Space Mono",ui-monospace,Menlo,monospace;
+ --pt-shadow-3:3px 3px 0 var(--pt-color-shadow-default);--pt-shadow-4:4px 4px 0 var(--pt-color-shadow-default);color-scheme:light}
+[data-theme=escuro]{--pt-color-bg-app:#151515;--pt-color-surface-card:#222222;--pt-color-surface-empty:#2C2C2C;--pt-color-ink-primary:#F5F0E1;--pt-color-ink-muted:#B5AFA2;
+ --pt-color-border-default:#F5F0E1;--pt-color-shadow-default:#F5F0E1;--pt-color-accent-brand:#FF69B4;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--pt-color-bg-app);color:var(--pt-color-ink-primary);font:500 16px/1.4 var(--pt-font-body)}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--pt-color-surface-card);border-bottom:3px solid var(--pt-color-border-default)}
+header h1{margin:0;font:700 14px/1.2 var(--pt-font-head);letter-spacing:.02em;text-transform:uppercase}
+.sp{flex:1}
+button,select{font:900 12px/1 var(--pt-font-body);letter-spacing:.04em;text-transform:uppercase;color:var(--pt-color-ink-primary);background:var(--pt-color-surface-card);
+ border:3px solid var(--pt-color-border-default);border-radius:8px;box-shadow:var(--pt-shadow-3);padding:8px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--pt-color-shadow-default)}
+button.pri{background:var(--pt-color-accent-primary);color:var(--pt-color-ink-on-accent);border-color:#000}
+button.big{font-size:14px;padding:12px 18px}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.ic{width:16px;height:16px;flex:none}
+.pill{font:700 12px/1 var(--pt-font-mono);border:2px solid var(--pt-color-border-default);border-radius:999px;padding:7px 12px;text-transform:uppercase;background:var(--pt-color-surface-empty)}
+.pill.on{background:var(--pt-color-accent-tab);color:#000;border-color:#000}.pill.upd{background:var(--pt-color-accent-primary);color:#000;border-color:#000}
+.lic{font-size:14px;opacity:.8;margin:0}.lic a{color:inherit}
+main{max-width:1240px;margin:0 auto;padding:24px 16px 64px;display:flex;flex-direction:column;gap:20px}
+.fases{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;list-style:none;margin:0;padding:0}
+.fases li{border:2px solid var(--pt-color-border-default);padding:10px;font:700 12px/1.2 var(--pt-font-mono);text-transform:uppercase;background:var(--pt-color-surface-empty)}
+.fases li.done{background:var(--pt-color-status-ok);color:#000;border-color:#000}.fases li.now{background:var(--pt-color-accent-tab);color:#000;border-color:#000}
+.fases li.bad{background:var(--pt-color-status-bad);color:#000;border-color:#000}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:1fr}.fases{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--pt-color-surface-card);border:3px solid var(--pt-color-border-default);box-shadow:var(--pt-shadow-4);padding:24px;display:flex;flex-direction:column;gap:16px}
+aside.card{padding:20px;gap:10px;box-shadow:none}
+.card h2{margin:0;font:900 26px/1.15 var(--pt-font-body);text-transform:uppercase}
+.k{font:700 11px/1.2 var(--pt-font-mono);text-transform:uppercase}
+.vers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ver{border:2px solid var(--pt-color-border-default);padding:14px;background:var(--pt-color-surface-empty);display:flex;flex-direction:column;gap:4px}
+.ver.app{background:var(--pt-color-accent-tab);color:#000;border-color:#000}
+.ver .v{font:900 28px/1.1 var(--pt-font-body);overflow-wrap:anywhere}.ver .s{font-size:12px}
+.chip{display:inline-block;font:700 10px/1 var(--pt-font-mono);border:2px solid #000;padding:3px 6px;background:var(--pt-color-accent-primary);color:#000;vertical-align:middle;margin-left:6px}
+ol.lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:n}
+ol.lista li{display:flex;gap:10px;align-items:flex-start;counter-increment:n;font-size:15px}
+ol.lista li::before{content:counter(n);flex:none;width:24px;height:24px;display:grid;place-items:center;background:var(--pt-color-accent-primary);border:2px solid #000;font:700 12px/1 var(--pt-font-mono);color:#000}
+.aviso{border:2px solid #000;padding:12px;background:var(--pt-color-accent-primary);color:#000;font-size:14px}
+.aviso b{display:block;font-weight:900;text-transform:uppercase;font-size:13px;margin-bottom:2px}
+.aviso.ok{background:var(--pt-color-status-ok)}.aviso.bad{background:var(--pt-color-status-bad)}
+.aviso.info{background:var(--pt-color-surface-empty);color:var(--pt-color-ink-primary);border-color:var(--pt-color-border-default)}
+ol.etapas{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+ol.etapas li{display:flex;gap:10px;align-items:center;font-size:15px}
+ol.etapas .st{flex:none;width:76px;text-align:center;border:2px solid #000;font:700 10px/1 var(--pt-font-mono);padding:4px 0;color:#000;text-transform:uppercase}
+ol.etapas li.wait{color:var(--pt-color-ink-muted)}ol.etapas li.wait .st{background:var(--pt-color-surface-empty);color:var(--pt-color-ink-muted);border-color:var(--pt-color-border-default)}
+ol.etapas li.now{font-weight:900}ol.etapas li.now .st{background:var(--pt-color-accent-tab)}
+ol.etapas li.done .st{background:var(--pt-color-status-ok)}ol.etapas li.bad{font-weight:900}ol.etapas li.bad .st{background:var(--pt-color-status-bad)}
+.prog{display:flex;flex-direction:column;gap:6px}.prog .r{display:flex;justify-content:space-between;font-weight:700;font-size:14px}.prog .r span:last-child{font-family:var(--pt-font-mono)}
+.barra{height:24px;border:2px solid var(--pt-color-border-default);background:var(--pt-color-surface-empty)}.barra i{display:block;height:100%;width:0;background:var(--pt-color-accent-tab);transition:width .2s}
+.acoes{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+label.conf{display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer}
+label.conf input{width:22px;height:22px;margin:0;accent-color:var(--pt-color-ink-primary);flex:none}
+aside .item{border:2px solid var(--pt-color-border-default);padding:8px;background:var(--pt-color-surface-empty);display:flex;flex-direction:column;gap:2px}
+aside .item .v{font-weight:900;font-size:14px;overflow-wrap:anywhere}
+aside .item.on{background:var(--pt-color-accent-tab);color:#000;border-color:#000}aside .item.upd{background:var(--pt-color-accent-primary);color:#000;border-color:#000}
+aside .item.ok{background:var(--pt-color-status-ok);color:#000;border-color:#000}aside .item.bad{background:var(--pt-color-status-bad);color:#000;border-color:#000}
+.mut{color:var(--pt-color-ink-muted);font-size:13px;margin:0}
+.mut a{color:inherit}
+pre.det{margin:0;white-space:pre-wrap;font:12px/1.4 var(--pt-font-mono);background:var(--pt-color-surface-empty);border:2px solid var(--pt-color-border-default);padding:8px;max-height:160px;overflow:auto}
+</style>
+</head>
+<body>
+<header>
+  <button id="voltar" data-act="voltar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span data-t="Voltar">Voltar</span></button>
+  <h1 data-t="Flash FM1">Flash FM1</h1>
+  <span class="sp"></span>
+  <span class="pill" id="pill">FM-1 OFF</span>
+  <button id="tema" data-act="tema" data-t="Tema">Tema</button>
+  <select id="lang" aria-label="Idioma / Language / Idioma"><option value="pt">PT</option><option value="en">EN</option><option value="es">ES</option></select>
+</header>
+<main>
+  <ol class="fases" id="fases" aria-label="Fases"></ol>
+  <div class="cols">
+    <section class="card" id="tela" aria-live="polite"></section>
+    <aside class="card" id="lado" aria-label="Seu FM-1"></aside>
+  </div>
+  <p class="lic" id="lic"><span data-t="O firmware e este instalador são software livre (GPL-3.0). Código-fonte:">O firmware e este instalador são software livre (GPL-3.0). Código-fonte:</span> <a href="https://github.com/wellingtonsaam/fm1-pocket-tutor" target="_blank" rel="noopener">github.com/wellingtonsaam/fm1-pocket-tutor</a></p>
+</main>
+<script src="install/fm1install-classico.js"></script>
+<script src="install/pacote-fm1.js" onerror="window.FM1_PACOTE=null"></script>
+<script>
+"use strict";
+const P = window.FM1_PACOTE, I = window.FM1Install, $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ------------------------------------------------------------ idioma (o mesmo do app: localStorage fm1lang) ---
+const DICT = {
+  en: { "O firmware e este instalador são software livre (GPL-3.0). Código-fonte:": "The firmware and this installer are free software (GPL-3.0). Source code:", "Voltar": "Back", "Flash FM1": "Flash FM1", "Tema": "Theme", "Conectar": "Connect", "Conferir": "Check", "Gravar": "Write", "Pronto": "Done",
+    "Conecte o FM-1": "Connect the FM-1", "Ligue o FM-1 ao computador com um cabo USB de dados.": "Plug the FM-1 into the computer with a USB data cable.",
+    "Ligue o FM-1 normalmente. Não precisa apertar nenhuma tecla especial.": "Switch the FM-1 on as usual. No special key is needed.",
+    "Feche o Firmware Hub, a DAW, o app da M-VAVE e o web app em outras abas (só um programa usa a porta MIDI).": "Close the Firmware Hub, your DAW, M-VAVE's app and the web app in other tabs (only one program can use the MIDI port).",
+    "Aperte CONECTAR FM-1 e permita o MIDI no pedido do Chrome.": "Press CONNECT FM-1 and allow MIDI when Chrome asks.",
+    "Conectar FM-1": "Connect FM-1", "Procurando o FM-1": "Looking for the FM-1", "Safari, iPhone ou iPad?": "Safari, iPhone or iPad?",
+    "Eles não têm Web MIDI. Abra esta página no Chrome ou no Edge.": "They have no Web MIDI. Open this page in Chrome or Edge.",
+    "Confira antes de gravar": "Check before writing", "No seu FM-1": "On your FM-1", "No app": "In the app", "Nova": "New",
+    "versão lida do FM-1": "version read from the FM-1", "versão não informada pelo FM-1": "the FM-1 did not report its version",
+    "pacote conferido (SHA-256 e CRC) antes de enviar": "package checked (SHA-256 and CRC) before sending",
+    "Você já tem esta versão": "You already have this version", "Gravar de novo só reinstala o mesmo firmware.": "Writing again only reinstalls the same firmware.",
+    "O firmware é trocado inteiro: copie antes os presets USER do FM6.": "The whole firmware is replaced: copy your FM6 USER presets first.",
+    "A gravação leva até 3 minutos. Deixe esta aba aberta e o computador acordado.": "Writing takes up to 3 minutes. Keep this tab open and the computer awake.",
+    "O FM-1 vai reiniciar sozinho duas vezes. É o esperado.": "The FM-1 restarts by itself twice. That is expected.",
+    "Copiei meus presets e entendi que o firmware será trocado.": "I copied my presets and understand the firmware will be replaced.",
+    "Cancelar": "Cancel", "Gravar no FM-1": "Write to the FM-1", "Reinstalar": "Reinstall",
+    "Terminar a instalação": "Finish the install", "Uma instalação foi interrompida": "An install was cut off",
+    "O FM-1 está em modo de atualização. Ele só volta a tocar depois que a gravação terminar.": "The FM-1 is in update mode. It plays again only once the write is finished.",
+    "modo de atualização": "update mode",
+    "Instalando": "Installing", "Gravando no FM-1": "Writing to the FM-1", "Gravado": "Written",
+    "Conferir o pacote": "Check the package", "Modo de atualização": "Update mode", "Reiniciar": "Restart", "Conferir a versão": "Check the version",
+    "Feito": "Done", "Agora": "Now", "Espera": "Waiting", "Parou": "Stopped",
+    "o FM-1 reinicia sozinho em modo de atualização": "the FM-1 restarts by itself in update mode",
+    "Não desligue o FM-1 nem tire o cabo": "Do not switch the FM-1 off or unplug it",
+    "Também não feche, não recarregue nem saia desta página. Se cair no meio, o FM-1 fica em modo de atualização e a mesma instalação termina o trabalho.": "Do not close, reload or leave this page either. If it is cut off, the FM-1 stays in update mode and the same install finishes the job.",
+    "Se o FM-1 não voltar em 30 s: desligue e ligue o FM-1. A instalação continua de onde parou.": "If the FM-1 does not come back within 30 s: switch it off and on. The install carries on where it stopped.",
+    "Firmware instalado": "Firmware installed", "Pronto · o FM-1 roda": "Done · the FM-1 runs", "Conferido: identidade": "Checked: identity", "versão": "version",
+    "conferido agora": "checked now", "em dia": "up to date", "Voltar às aulas": "Back to the lessons",
+    "A gravação parou": "The write stopped", "O FM-1 não perdeu nada": "The FM-1 lost nothing", "Não deu certo": "It did not work",
+    "Se não der certo": "If it still fails", "Desligue e ligue o FM-1.": "Switch the FM-1 off and on.",
+    "Segure OCT− ao ligar o FM-1 (resgate por USB) e tente de novo.": "Hold OCT− while switching the FM-1 on (USB rescue) and try again.",
+    "Voltar ao firmware oficial: FM-1 Firmware Hub, no Chrome ou Edge.": "Back to the official firmware: FM-1 Firmware Hub, in Chrome or Edge.",
+    "Copiar detalhes": "Copy details", "Copiado": "Copied", "Tentar de novo": "Try again",
+    "Seu FM-1": "Your FM-1", "Conexão": "Connection", "Identidade": "Identity", "Versão": "Version", "Navegador": "Browser",
+    "Desconectado": "Disconnected", "Conectado": "Connected", "Reiniciando": "Restarting", "Gravado agora": "Written now",
+    "Chrome · Web MIDI com SysEx": "Chrome · Web MIDI with SysEx", "Sem Web MIDI": "No Web MIDI", "SysEx não permitido": "SysEx not allowed",
+    "Resgate: segure OCT− ao ligar o FM-1. Ele liga só o atualizador por USB; depois aperte CONECTAR FM-1.": "Rescue: hold OCT− while switching the FM-1 on. It starts only the USB updater; then press CONNECT FM-1.",
+    "Voltar ao firmware oficial:": "Back to the official firmware:",
+    "O app não tem pacote de firmware": "The app has no firmware package", "Rode tools/web_fw.py depois de compilar.": "Run tools/web_fw.py after building.",
+    "FM-1 desconectado": "FM-1 disconnected",
+    "nomidi": "This browser has no Web MIDI. Open this page in Chrome or Edge on a computer, or Chrome on Android (iPhone and iPad have none).",
+    "denied": "MIDI with SysEx was not allowed. Allow it in the site settings (the icon left of the address), reload the page and try again.",
+    "notfound": "FM-1 not found. Plug it in with a USB data cable (a charge-only cable carries no data), switch it on, close other programs and tabs that use MIDI and try again.",
+    "inuse": "The FM-1 is there, but another program or tab is using its MIDI port. Close the Firmware Hub, a DAW, M-VAVE's app or the web app in another tab and try again. Busy ports: ",
+    "model": "The connected device is not an FM-1: nothing was written.",
+    "foreign": "The FM-1 is in the update mode of another firmware. Finish that update with its own installer (Firmware Hub) and try again.",
+    "stopped": "The FM-1 stopped answering. Plug the cable in again and press TRY AGAIN: it stays in update mode until it is finished.",
+    "lost": "The USB connection was lost. Plug the cable in again and press TRY AGAIN: the FM-1 stays in update mode until it is finished.",
+    "noloader": "The FM-1 in update mode did not appear. Unplug and replug the USB cable and press TRY AGAIN.",
+    "noreturn": "The FM-1 did not come back after writing. Switch it off and on and press TRY AGAIN to check it.",
+    "mismatch": "Written, but the FM-1 reports another firmware: ",
+    "badpkg": "The app's package failed its check: nothing was written. ",
+    "badreq": "The FM-1 asked for something outside the package: nothing more was sent. ",
+    "erro": "Unexpected error: " },
+  es: { "O firmware e este instalador são software livre (GPL-3.0). Código-fonte:": "El firmware y este instalador son software libre (GPL-3.0). Código fuente:", "Voltar": "Volver", "Flash FM1": "Flash FM1", "Tema": "Tema", "Conectar": "Conectar", "Conferir": "Revisar", "Gravar": "Grabar", "Pronto": "Listo",
+    "Conecte o FM-1": "Conecta el FM-1", "Ligue o FM-1 ao computador com um cabo USB de dados.": "Conecta el FM-1 al ordenador con un cable USB de datos.",
+    "Ligue o FM-1 normalmente. Não precisa apertar nenhuma tecla especial.": "Enciende el FM-1 como siempre. No hace falta ninguna tecla especial.",
+    "Feche o Firmware Hub, a DAW, o app da M-VAVE e o web app em outras abas (só um programa usa a porta MIDI).": "Cierra el Firmware Hub, la DAW, la app de M-VAVE y la web app en otras pestañas (solo un programa usa el puerto MIDI).",
+    "Aperte CONECTAR FM-1 e permita o MIDI no pedido do Chrome.": "Pulsa CONECTAR FM-1 y permite el MIDI cuando Chrome lo pida.",
+    "Conectar FM-1": "Conectar FM-1", "Procurando o FM-1": "Buscando el FM-1", "Safari, iPhone ou iPad?": "¿Safari, iPhone o iPad?",
+    "Eles não têm Web MIDI. Abra esta página no Chrome ou no Edge.": "No tienen Web MIDI. Abre esta página en Chrome o Edge.",
+    "Confira antes de gravar": "Revisa antes de grabar", "No seu FM-1": "En tu FM-1", "No app": "En la app", "Nova": "Nueva",
+    "versão lida do FM-1": "versión leída del FM-1", "versão não informada pelo FM-1": "el FM-1 no informó su versión",
+    "pacote conferido (SHA-256 e CRC) antes de enviar": "paquete revisado (SHA-256 y CRC) antes de enviar",
+    "Você já tem esta versão": "Ya tienes esta versión", "Gravar de novo só reinstala o mesmo firmware.": "Grabar de nuevo solo reinstala el mismo firmware.",
+    "O firmware é trocado inteiro: copie antes os presets USER do FM6.": "El firmware se cambia entero: copia antes los presets USER del FM6.",
+    "A gravação leva até 3 minutos. Deixe esta aba aberta e o computador acordado.": "La grabación tarda hasta 3 minutos. Deja esta pestaña abierta y el ordenador despierto.",
+    "O FM-1 vai reiniciar sozinho duas vezes. É o esperado.": "El FM-1 se reinicia solo dos veces. Es lo esperado.",
+    "Copiei meus presets e entendi que o firmware será trocado.": "Copié mis presets y entiendo que el firmware se cambiará.",
+    "Cancelar": "Cancelar", "Gravar no FM-1": "Grabar en el FM-1", "Reinstalar": "Reinstalar",
+    "Terminar a instalação": "Terminar la instalación", "Uma instalação foi interrompida": "Una instalación se interrumpió",
+    "O FM-1 está em modo de atualização. Ele só volta a tocar depois que a gravação terminar.": "El FM-1 está en modo de actualización. Solo vuelve a sonar cuando termine la grabación.",
+    "modo de atualização": "modo de actualización",
+    "Instalando": "Instalando", "Gravando no FM-1": "Grabando en el FM-1", "Gravado": "Grabado",
+    "Conferir o pacote": "Revisar el paquete", "Modo de atualização": "Modo de actualización", "Reiniciar": "Reiniciar", "Conferir a versão": "Revisar la versión",
+    "Feito": "Hecho", "Agora": "Ahora", "Espera": "Espera", "Parou": "Paró",
+    "o FM-1 reinicia sozinho em modo de atualização": "el FM-1 se reinicia solo en modo de actualización",
+    "Não desligue o FM-1 nem tire o cabo": "No apagues el FM-1 ni quites el cable",
+    "Também não feche, não recarregue nem saia desta página. Se cair no meio, o FM-1 fica em modo de atualização e a mesma instalação termina o trabalho.": "Tampoco cierres, recargues ni salgas de esta página. Si se corta, el FM-1 queda en modo de actualización y la misma instalación termina el trabajo.",
+    "Se o FM-1 não voltar em 30 s: desligue e ligue o FM-1. A instalação continua de onde parou.": "Si el FM-1 no vuelve en 30 s: apágalo y enciéndelo. La instalación sigue donde quedó.",
+    "Firmware instalado": "Firmware instalado", "Pronto · o FM-1 roda": "Listo · el FM-1 tiene", "Conferido: identidade": "Revisado: identidad", "versão": "versión",
+    "conferido agora": "revisado ahora", "em dia": "al día", "Voltar às aulas": "Volver a las clases",
+    "A gravação parou": "La grabación se detuvo", "O FM-1 não perdeu nada": "El FM-1 no perdió nada", "Não deu certo": "No funcionó",
+    "Se não der certo": "Si aún falla", "Desligue e ligue o FM-1.": "Apaga y enciende el FM-1.",
+    "Segure OCT− ao ligar o FM-1 (resgate por USB) e tente de novo.": "Mantén OCT− al encender el FM-1 (rescate por USB) e inténtalo de nuevo.",
+    "Voltar ao firmware oficial: FM-1 Firmware Hub, no Chrome ou Edge.": "Volver al firmware oficial: FM-1 Firmware Hub, en Chrome o Edge.",
+    "Copiar detalhes": "Copiar detalles", "Copiado": "Copiado", "Tentar de novo": "Intentar de nuevo",
+    "Seu FM-1": "Tu FM-1", "Conexão": "Conexión", "Identidade": "Identidad", "Versão": "Versión", "Navegador": "Navegador",
+    "Desconectado": "Desconectado", "Conectado": "Conectado", "Reiniciando": "Reiniciando", "Gravado agora": "Grabado ahora",
+    "Chrome · Web MIDI com SysEx": "Chrome · Web MIDI con SysEx", "Sem Web MIDI": "Sin Web MIDI", "SysEx não permitido": "SysEx no permitido",
+    "Resgate: segure OCT− ao ligar o FM-1. Ele liga só o atualizador por USB; depois aperte CONECTAR FM-1.": "Rescate: mantén OCT− al encender el FM-1. Arranca solo el actualizador por USB; luego pulsa CONECTAR FM-1.",
+    "Voltar ao firmware oficial:": "Volver al firmware oficial:",
+    "O app não tem pacote de firmware": "La app no tiene paquete de firmware", "Rode tools/web_fw.py depois de compilar.": "Ejecuta tools/web_fw.py después de compilar.",
+    "FM-1 desconectado": "FM-1 desconectado",
+    "nomidi": "Este navegador no tiene Web MIDI. Abre esta página en Chrome o Edge en un ordenador, o Chrome en Android (iPhone y iPad no lo tienen).",
+    "denied": "El MIDI con SysEx no se permitió. Permítelo en la configuración del sitio (icono a la izquierda de la dirección), recarga la página e inténtalo de nuevo.",
+    "notfound": "FM-1 no encontrado. Conéctalo con un cable USB de datos (un cable solo de carga no sirve), enciéndelo, cierra otros programas y pestañas que usen MIDI e inténtalo de nuevo.",
+    "inuse": "El FM-1 está, pero otro programa o pestaña usa su puerto MIDI. Cierra el Firmware Hub, la DAW, la app de M-VAVE o la web app en otra pestaña e inténtalo de nuevo. Puertos ocupados: ",
+    "model": "El aparato conectado no es un FM-1: no se grabó nada.",
+    "foreign": "El FM-1 está en el modo de actualización de otro firmware. Termina esa actualización con su instalador (Firmware Hub) e inténtalo de nuevo.",
+    "stopped": "El FM-1 dejó de responder. Conecta el cable de nuevo y pulsa INTENTAR DE NUEVO: queda en modo de actualización hasta terminar.",
+    "lost": "Se perdió la conexión USB. Conecta el cable de nuevo y pulsa INTENTAR DE NUEVO: el FM-1 queda en modo de actualización hasta terminar.",
+    "noloader": "No apareció el FM-1 en modo de actualización. Quita y pon el cable USB y pulsa INTENTAR DE NUEVO.",
+    "noreturn": "El FM-1 no volvió después de grabar. Apágalo y enciéndelo y pulsa INTENTAR DE NUEVO para revisarlo.",
+    "mismatch": "Grabado, pero el FM-1 informa otro firmware: ",
+    "badpkg": "El paquete de la app no pasó la revisión: no se grabó nada. ",
+    "badreq": "El FM-1 pidió algo fuera del paquete: no se envió nada más. ",
+    "erro": "Error inesperado: " },
+  pt: {
+    "nomidi": "Este navegador não tem Web MIDI. Abra esta página no Chrome ou no Edge (computador) ou no Chrome do Android. iPhone e iPad não têm.",
+    "denied": "O MIDI com SysEx não foi permitido. Libere nas configurações do site (ícone à esquerda do endereço), recarregue a página e tente de novo.",
+    "notfound": "FM-1 não encontrado. Ligue com um cabo USB de dados (cabo só de carga não passa dados), ligue o FM-1, feche outros programas e abas que usam MIDI e tente de novo.",
+    "inuse": "O FM-1 está ligado, mas outro programa ou aba está usando a porta MIDI dele. Feche o Firmware Hub, a DAW, o app da M-VAVE ou o web app em outra aba e tente de novo. Portas ocupadas: ",
+    "model": "O aparelho conectado não é um FM-1: nada foi gravado.",
+    "foreign": "O FM-1 está no modo de atualização de outro firmware. Termine essa atualização com o instalador dele (Firmware Hub) e tente de novo.",
+    "stopped": "O FM-1 parou de responder. Ligue o cabo de novo e aperte TENTAR DE NOVO: ele fica em modo de atualização até terminar.",
+    "lost": "A conexão USB caiu. Ligue o cabo de novo e aperte TENTAR DE NOVO: o FM-1 fica em modo de atualização até terminar.",
+    "noloader": "O FM-1 em modo de atualização não apareceu. Tire e ponha o cabo USB e aperte TENTAR DE NOVO.",
+    "noreturn": "O FM-1 não voltou depois de gravar. Desligue e ligue o FM-1 e aperte TENTAR DE NOVO para conferir.",
+    "mismatch": "Gravado, mas o FM-1 informa outro firmware: ",
+    "badpkg": "O pacote do app não passou na conferência: nada foi gravado. ",
+    "badreq": "O FM-1 pediu algo fora do pacote: nada mais foi enviado. ",
+    "erro": "Erro inesperado: " },
+};
+let LANG = "pt";
+try { LANG = localStorage.getItem("fm1lang") || "pt"; } catch (_) {}
+if (!DICT[LANG]) LANG = "pt";
+const T = (s) => (DICT[LANG] && DICT[LANG][s]) || DICT.pt[s] || s;
+const say = (code, extra) => T(DICT.pt[code] ? code : "erro") + (extra || "");
+
+// ------------------------------------------------------------ tema (o do app: localStorage fm1s.theme) ---
+function cfg() { try { return JSON.parse(localStorage.getItem("fm1s") || "{}") || {}; } catch (_) { return {}; } }
+function tema() {
+  const th = cfg().theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro");
+  document.documentElement.dataset.theme = th;
+}
+
+// ------------------------------------------------------------ estado ---
+const ETAPAS = ["Conferir o pacote", "Modo de atualização", "Gravar", "Reiniciar", "Conferir a versão"];
+const S = {
+  tela: "conectar",           // conectar | conferir | retomar | gravando | pronto | erro
+  midi: null, nav: navigator.requestMIDIAccess ? "ok" : "nomidi",
+  dev: null,                  // { identity, ota, version }
+  con: "off", conTxt: "",     // off | on | upd | bad
+  msg: null, busy: false, conf: false,
+  et: ["wait", "wait", "wait", "wait", "wait"], pct: 0, err: null, verFinal: null, log: [],
+};
+window.__instalar = S;        // (os testes leem o estado)
+const PCK = P ? (() => { const s = atob(P.b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; })() : null;
+const log = (s) => { S.log.push(new Date().toISOString().slice(11, 19) + " " + s); };
+const verTxt = (v) => (v ? (/^\d+\.\d+/.test(v) ? "v" + v : v) : "—");
+
+// ------------------------------------------------------------ desenho ---
+function fases() {
+  const st = { conectar: ["now", "wait", "wait", "wait"], conferir: ["done", "now", "wait", "wait"], retomar: ["done", "now", "wait", "wait"],
+    gravando: ["done", "done", "now", "wait"], pronto: ["done", "done", "done", "done"], erro: ["done", "done", "bad", "wait"] }[S.tela];
+  $("#fases").innerHTML = ["Conectar", "Conferir", "Gravar", "Pronto"].map((t, i) => `<li class="${st[i]}">${i + 1} · ${esc(T(t))}</li>`).join("");
+}
+const aviso = (head, body, kind = "") => `<div class="aviso ${kind}">${head ? `<b>${esc(head)}</b>` : ""}${body ? esc(body) : ""}</div>`;
+const lista = (items) => `<ol class="lista">${items.map((s) => `<li>${esc(T(s))}</li>`).join("")}</ol>`;
+const acoes = (bs) => `<div class="acoes">${bs.map(([act, label, pri, dis]) => `<button class="big${pri ? " pri" : ""}" data-act="${act}"${dis ? " disabled" : ""}>${esc(T(label))}</button>`).join("")}</div>`;
+function versoes(a, aSub, b, bSub, nova) {
+  return `<div class="vers"><div class="ver"><span class="k">${esc(T("No seu FM-1"))}</span><span class="v" id="vFm">${esc(a)}</span><span class="s">${esc(aSub)}</span></div>` +
+    `<div class="ver app"><span class="k">${esc(T("No app"))}${nova ? `<span class="chip">${esc(T("Nova"))}</span>` : ""}</span><span class="v" id="vApp">${esc(b)}</span><span class="s">${esc(bSub)}</span></div></div>`;
+}
+function etapas() {
+  const lab = { done: "Feito", now: "Agora", wait: "Espera", bad: "Parou" };
+  return `<ol class="etapas" id="etapas">${ETAPAS.map((s, i) => `<li class="${S.et[i]}"><span class="st">${esc(T(lab[S.et[i]]))}</span><span>${i + 1}. ${esc(T(s))}${i === 1 && S.et[1] === "now" ? " · " + esc(T("o FM-1 reinicia sozinho em modo de atualização")) : ""}</span></li>`).join("")}</ol>`;
+}
+const naoDesligue = () => aviso(T("Não desligue o FM-1 nem tire o cabo"), T("Também não feche, não recarregue nem saia desta página. Se cair no meio, o FM-1 fica em modo de atualização e a mesma instalação termina o trabalho."));
+function barra() {
+  return `<div class="prog"><div class="r"><span>${esc(T(S.pct >= 100 ? "Gravado" : "Gravando no FM-1"))}</span><span id="pct">${S.pct}%</span></div><div class="barra"><i style="width:${S.pct}%"></i></div></div>`;
+}
+
+function tela() {
+  const e = $("#tela");
+  if (!P) { e.innerHTML = `<h2>${esc(T("O app não tem pacote de firmware"))}</h2>${aviso("", T("Rode tools/web_fw.py depois de compilar."), "bad")}`; return; }
+  const app = verTxt(P.version), appSub = `${P.product} · ${T("pacote conferido (SHA-256 e CRC) antes de enviar")}`;
+  if (S.tela === "conectar") {
+    e.innerHTML = `<h2>${esc(T("Conecte o FM-1"))}</h2>` +
+      lista(["Ligue o FM-1 ao computador com um cabo USB de dados.", "Ligue o FM-1 normalmente. Não precisa apertar nenhuma tecla especial.",
+        "Feche o Firmware Hub, a DAW, o app da M-VAVE e o web app em outras abas (só um programa usa a porta MIDI).", "Aperte CONECTAR FM-1 e permita o MIDI no pedido do Chrome."]) +
+      (S.msg ? aviso("", S.msg, "bad") : "") +
+      (S.nav === "nomidi" ? aviso(T("Safari, iPhone ou iPad?"), T("Eles não têm Web MIDI. Abra esta página no Chrome ou no Edge."), "info") : "") +
+      acoes([["conectar", S.busy ? "Procurando o FM-1" : "Conectar FM-1", true, S.busy || S.nav === "nomidi"]]);
+  } else if (S.tela === "conferir") {
+    const d = S.dev, igual = !!d.version && d.version === P.version;
+    const num = (v) => (/^(\d+)\.(\d+)/.exec(v || "") || []).slice(1).map(Number), a = num(d.version), b = num(P.version);
+    const nova = a.length === 2 && b.length === 2 && (b[0] > a[0] || (b[0] === a[0] && b[1] > a[1]));   // (só com X.Y dos dois lados)
+    e.innerHTML = `<h2>${esc(T("Confira antes de gravar"))}</h2>` +
+      versoes(verTxt(d.version), `${d.identity} · ${T(d.version ? "versão lida do FM-1" : "versão não informada pelo FM-1")}`, app, appSub, nova) +
+      (igual ? aviso(T("Você já tem esta versão"), T("Gravar de novo só reinstala o mesmo firmware."), "info") : "") +
+      lista(["O firmware é trocado inteiro: copie antes os presets USER do FM6.", "A gravação leva até 3 minutos. Deixe esta aba aberta e o computador acordado.",
+        "O FM-1 vai reiniciar sozinho duas vezes. É o esperado."]) +
+      `<label class="conf"><input type="checkbox" id="conf"${S.conf ? " checked" : ""}> ${esc(T("Copiei meus presets e entendi que o firmware será trocado."))}</label>` +
+      acoes([["voltar", "Cancelar", false], ["gravar", igual ? "Reinstalar" : "Gravar no FM-1", true, !S.conf]]);
+  } else if (S.tela === "retomar") {
+    e.innerHTML = `<h2>${esc(T("Terminar a instalação"))}</h2>` +
+      aviso(T("Uma instalação foi interrompida"), T("O FM-1 está em modo de atualização. Ele só volta a tocar depois que a gravação terminar.")) +
+      versoes("—", `${S.dev.identity} · ${T("modo de atualização")}`, app, appSub, false) +
+      `<label class="conf"><input type="checkbox" id="conf"${S.conf ? " checked" : ""}> ${esc(T("Copiei meus presets e entendi que o firmware será trocado."))}</label>` +
+      acoes([["voltar", "Cancelar", false], ["gravar", "Terminar a instalação", true, !S.conf]]);
+  } else if (S.tela === "gravando") {
+    e.innerHTML = `<h2>${esc(T("Instalando"))} ${esc(app)}</h2>` + barra() + etapas() + naoDesligue() +
+      (S.et[1] === "now" ? `<p class="mut">${esc(T("Se o FM-1 não voltar em 30 s: desligue e ligue o FM-1. A instalação continua de onde parou."))}</p>` : "");
+  } else if (S.tela === "pronto") {
+    const v = S.verFinal || P.version;
+    e.innerHTML = `<h2>${esc(T("Firmware instalado"))}</h2>` +
+      aviso(`${T("Pronto · o FM-1 roda")} ${P.name} ${verTxt(v)}`, `${T("Conferido: identidade")} ${P.product}${S.verFinal ? `, ${T("versão")} ${S.verFinal}` : ""}.`, "ok") +
+      versoes(verTxt(v), `${P.product} · ${T("conferido agora")}`, app, T("em dia"), false) + acoes([["voltar", "Voltar às aulas", true]]);
+  } else if (S.tela === "erro") {
+    const er = S.err, cai = ["lost", "stopped", "noloader"].includes(er.code);
+    e.innerHTML = `<h2>${esc(T("A gravação parou"))}</h2>` + etapas() +
+      aviso(T(cai ? "O FM-1 não perdeu nada" : "Não deu certo"), er.text, "bad") +
+      `<span class="k">${esc(T("Se não der certo"))}</span>` +
+      lista(["Desligue e ligue o FM-1.", "Segure OCT− ao ligar o FM-1 (resgate por USB) e tente de novo.", "Voltar ao firmware oficial: FM-1 Firmware Hub, no Chrome ou Edge."]) +
+      `<pre class="det" id="det">${esc(S.log.slice(-12).join("\n"))}</pre>` +
+      acoes([["copiar", "Copiar detalhes", false], ["tentar", "Tentar de novo", true, S.busy]]);
+  }
+}
+function lado() {
+  const item = (k, v, cls = "") => `<div class="item ${cls}"><span class="k">${esc(T(k))}</span><span class="v">${esc(v)}</span></div>`;
+  const conCls = { on: "on", upd: "upd", bad: "bad", off: "" }[S.con];
+  const conTxt = S.conTxt || T("Desconectado");
+  const nav = S.nav === "nomidi" ? ["Sem Web MIDI", "bad"] : S.nav === "denied" ? ["SysEx não permitido", "bad"] : ["Chrome · Web MIDI com SysEx", "ok"];
+  $("#lado").innerHTML = `<span class="k">${esc(T("Seu FM-1"))}</span>` + item("Conexão", conTxt, conCls) +
+    (S.dev ? item("Identidade", S.dev.identity) : "") + (S.dev && !S.dev.ota ? item("Versão", S.dev.version || "—") : "") +
+    item("Navegador", T(nav[0]), nav[1]) +
+    `<p class="mut">${esc(T("Resgate: segure OCT− ao ligar o FM-1. Ele liga só o atualizador por USB; depois aperte CONECTAR FM-1."))}</p>` +
+    `<p class="mut">${esc(T("Voltar ao firmware oficial:"))} <a href="https://thefirmwarehub.com" target="_blank" rel="noopener">FM-1 Firmware Hub</a> (M-UPGRADE).</p>`;
+  const pill = $("#pill");
+  pill.className = "pill " + (S.con === "on" ? "on" : S.con === "upd" ? "upd" : "");
+  pill.textContent = S.con === "on" ? "FM-1 ON" : S.con === "upd" ? "FM-1 · " + T("Modo de atualização") : "FM-1 OFF";
+}
+function render() {
+  document.documentElement.lang = LANG === "pt" ? "pt-BR" : LANG;
+  document.querySelectorAll("[data-t]").forEach((n) => { n.textContent = T(n.dataset.t); });
+  $("#lang").value = LANG;
+  $("#voltar").disabled = S.tela === "gravando";
+  fases(); tela(); lado();
+}
+
+// ------------------------------------------------------------ ações ---
+const PRODUCT_MODEL = P ? P.product.split("_")[0] : "FM-1";
+async function acesso() {
+  if (S.midi) return S.midi;
+  try { S.midi = await navigator.requestMIDIAccess({ sysex: true }); S.nav = "ok"; }
+  catch (_) { S.nav = "denied"; throw Object.assign(new Error("denied"), { code: "denied" }); }
+  S.midi.onstatechange = () => { if (S.tela === "conferir" && !presente()) { S.tela = "conectar"; S.dev = null; S.con = "off"; S.conTxt = ""; S.msg = T("FM-1 desconectado"); render(); } };
+  return S.midi;
+}
+function presente() {
+  const live = (m) => { const a = []; m.forEach((p) => { if (p.state !== "disconnected") a.push(p); }); return a; };
+  return live(S.midi.inputs).some((p) => window.FM1Ports.LOOKS.test(p.name || ""));
+}
+// o que está no FM-1 agora: { identity, ota, version } ou null
+async function ler() {
+  const d = await I.inspectDevice(await acesso(), { log: false });
+  if (!d.identity) return null;
+  return { identity: d.identity, ota: d.ota, model: d.model, version: d.dock && d.dock.version ? d.dock.version : null };
+}
+function mostra(dev) {
+  S.dev = dev;
+  if (!dev) { S.con = "off"; S.conTxt = ""; return; }
+  S.con = dev.ota ? "upd" : "on";
+  S.conTxt = dev.ota ? `${T("Modo de atualização")} · ${dev.identity}` : `${T("Conectado")} · ${dev.identity}`;
+}
+async function conectar() {
+  S.busy = true; S.msg = null; render();
+  try {
+    const dev = await ler();
+    if (!dev) throw Object.assign(new Error("notfound"), { code: "notfound" });
+    if (!window.FM1Ota.sameKeyboard(dev.model, PRODUCT_MODEL)) throw Object.assign(new Error("model"), { code: "model" });
+    mostra(dev); log("conectado: " + dev.identity + (dev.version ? " " + dev.version : ""));
+    S.conf = false; S.tela = dev.ota ? "retomar" : "conferir";
+  } catch (e) {
+    S.msg = say(e.code, e.code === "inuse" ? e.detail || "" : ""); log("conectar: " + (e.code || "") + " " + e.message);
+  }
+  S.busy = false; render();
+}
+function passo(k, v) {
+  if (k !== "verify" && k !== "write") log(k + (v != null ? " " + v : ""));
+  const n = Math.max(1, Math.ceil(S.imgLen / 512));
+  if (k === "start") { S.et = ["now", "wait", "wait", "wait", "wait"]; S.con = "on"; S.conTxt = `${T("Conectado")} · ${v}`; }
+  else if (k === "loader") { S.et[0] = "done"; S.et[1] = "now"; S.con = "upd"; S.conTxt = T("Modo de atualização"); }
+  else if (k === "write") { S.et[0] = S.et[1] = "done"; S.et[2] = "now"; S.pct = Math.min(99, Math.floor(v * 100 / n)); S.con = "upd"; S.conTxt = `${T("Modo de atualização")} · ota-${P.product}`; }
+  else if (k === "reboot") { S.et[0] = S.et[1] = S.et[2] = "done"; S.et[3] = "now"; S.pct = 100; S.con = "upd"; S.conTxt = T("Reiniciando"); }
+  else if (k === "done") { S.et[3] = "done"; S.et[4] = "now"; S.con = "on"; S.conTxt = `${T("Conectado")} · ${v}`; }
+  render();
+}
+const segura = (e) => { e.preventDefault(); e.returnValue = ""; return ""; };
+async function gravar() {
+  if (!S.conf && S.tela !== "erro") return;     // nada é gravado sem a caixa marcada (regra do projeto)
+  const retomando = !!(S.dev && S.dev.ota);
+  S.tela = "gravando"; S.err = null; S.pct = 0;
+  S.et = retomando ? ["done", "done", "now", "wait", "wait"] : ["now", "wait", "wait", "wait", "wait"];
+  addEventListener("beforeunload", segura); render();
+  try {
+    const pkg = await I.checkPackage(PCK, P);
+    S.imgLen = pkg.image.length;
+    log("pacote ok: " + pkg.product + " " + P.version + " sha256 " + P.sha256.slice(0, 12));
+    const got = await I.installOn(await acesso(), pkg, P.name, async () => true, passo);
+    if (!got) throw Object.assign(new Error("the FM-1 was not found to finish the install"), { code: "stopped" });
+    S.et = ["done", "done", "done", "done", "now"]; S.pct = 100; render();
+    let dev = null;
+    for (let t = 0; t < 3 && !(dev && dev.version); t++) { try { dev = await ler(); } catch (_) {} if (!(dev && dev.version)) await new Promise((r) => setTimeout(r, 800)); }
+    mostra(dev || { identity: got, ota: false, version: null });
+    S.verFinal = dev && dev.version; log("conferido: " + got + (S.verFinal ? " " + S.verFinal : " (sem versão)"));
+    S.et[4] = "done"; S.tela = "pronto";
+  } catch (e) {
+    const i = S.et.indexOf("now");
+    if (i >= 0) S.et[i] = "bad"; else S.et[2] = "bad";
+    S.err = { code: e.code || "erro", text: say(e.code, e.code === "mismatch" || e.code === "inuse" ? e.detail || "" : ["badpkg", "badreq"].includes(e.code) || !DICT.pt[e.code] ? e.message : "") };
+    log("erro " + S.err.code + ": " + e.message);
+    S.tela = "erro"; S.con = ["lost", "noloader", "noreturn"].includes(e.code) ? "bad" : S.con;
+    if (S.con === "bad") S.conTxt = T("Desconectado");
+  } finally { removeEventListener("beforeunload", segura); render(); }
+}
+// TENTAR DE NOVO: lê o FM-1 primeiro. Em modo de atualização: termina a gravação. Já com esta versão: pronto. Sem
+// versão para comparar: volta a CONFERIR (a pessoa confirma de novo). Senão grava de novo (ela já confirmou).
+async function tentar() {
+  S.busy = true; render();
+  let dev = null;
+  try { dev = await ler(); } catch (e) { log("tentar: " + (e.code || "") + " " + e.message); }
+  S.busy = false;
+  if (!dev) { S.err = { code: "notfound", text: say("notfound") }; render(); return; }
+  mostra(dev);
+  if (dev.ota) return gravar();
+  if (dev.identity === P.product && dev.version && dev.version === P.version) { S.verFinal = dev.version; S.et = ["done", "done", "done", "done", "done"]; S.tela = "pronto"; render(); return; }
+  if (!dev.version) { S.conf = false; S.tela = "conferir"; render(); return; }
+  return gravar();
+}
+function voltar() {
+  if (S.tela === "gravando") return;
+  // veio do botão do app (?de=app): volta para ele, onde estava; senão abre o app
+  if (new URLSearchParams(location.search).get("de") === "app" && history.length > 1) history.back();
+  else location.href = "prototipo-aulas.html";
+}
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-act]");
+  if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a === "conectar") conectar();
+  else if (a === "gravar") gravar();
+  else if (a === "tentar") tentar();
+  else if (a === "voltar") voltar();
+  else if (a === "copiar") {
+    const txt = [`FM1 Pocket Tutor · ${P && P.product} ${P && P.version} · ${navigator.userAgent}`, ...S.log].join("\n");
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { b.textContent = T("Copiado"); }, () => {});
+  } else if (a === "tema") {
+    const c = cfg(); c.theme = document.documentElement.dataset.theme === "escuro" ? "claro" : "escuro";
+    try { localStorage.setItem("fm1s", JSON.stringify(c)); } catch (_) {}
+    tema();
+  }
+});
+document.addEventListener("change", (ev) => {
+  if (ev.target.id === "conf") { S.conf = ev.target.checked; render(); }
+  else if (ev.target.id === "lang") { LANG = ev.target.value; try { localStorage.setItem("fm1lang", LANG); } catch (_) {} render(); }
+});
+tema(); render();
+</script>
+</body>
+</html>

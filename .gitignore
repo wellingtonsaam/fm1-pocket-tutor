@@ -46,3 +46,7 @@ __pycache__/
 /docs/spikes/*
 !/docs/spikes/smf.js
 !/docs/spikes/brilha.js
+# o instalador do firmware (GPL-3.0): a página, os módulos e o pacote que ela grava (T208)
+!/docs/instalar-firmware.html
+!/docs/dock.js
+!/docs/install/

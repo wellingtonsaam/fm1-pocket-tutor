@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// © 2026 Wellington Saam. Todos os direitos reservados (FM1 Pocket Tutor, app web; ver LICENSING.md).
 // "Brilha brilha estrelinha" (melodia tradicional, domínio público), a música de exemplo dos spikes F2 e F3.
 // Em tempos: a melodia (nota MIDI, duração), os acordes (cifra, duração) e as frases (nome, início, fim).
 'use strict';

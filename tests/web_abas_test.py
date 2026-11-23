@@ -80,6 +80,39 @@ with sync_playwright() as p:
     check('introdução: a tela do FM-1 mostra o acorde', len(q['tela']) > 4 and q['tela'][4].startswith('INTRO'), q['tela'])
     check('introdução: o compasso 1 e o acorde marcados', q['cur'] == 1 and q['ac'] == 1, q)
     pg.evaluate("() => document.getElementById('pvPlay').click()")
+    # T124 também no formato nota a nota (vista Notas): Tocar e Ouvir a frase acendem o acorde da introdução
+    pg.evaluate("() => { CFG.view = 'frases'; S.part = 0; openSong(S.lesson); PV.setB(96); }"); pg.wait_for_timeout(300)
+    for act in ('pvnotes', 'pvhear'):
+        pg.evaluate("a => { __fm1.sent.length = 0; document.querySelector(`[data-act=\"${a}\"]`).click(); }", act)
+        pg.wait_for_timeout(700)
+        q = pg.evaluate("() => __fm1.sent.filter(m => m[0] === 0x9F && m[2] > 0).map(m => m[1])")
+        check(f'nota a nota ({act}): as luzes do 1º acorde no 1º segundo', len(q) >= 3, q)
+        pg.evaluate("a => document.querySelector(`[data-act=\"${a}\"]`).click()", act); pg.wait_for_timeout(300)
+    # Praticar na aba Arranjo (sem a caixa #pvNow): a tecla certa avança e a luz passa para a nota seguinte
+    pg.evaluate("() => { CFG.view = 'midi'; CFG.pvTab = 'arr'; S.part = 0; openSong(S.lesson); PV.setB(96); }"); pg.wait_for_timeout(300)
+    pg.evaluate("() => document.querySelector('[data-act=\"pvpmel\"]').click()"); pg.wait_for_timeout(500)
+    seq = []
+    for _ in range(4):
+        cue = pg.evaluate("() => Object.keys(keyEl).filter(k => keyEl[k].classList.contains('cue')).map(Number)")
+        if not cue:
+            break
+        pg.evaluate("n => { __fm1.key(n, true); __fm1.key(n, false); }", cue[0]); pg.wait_for_timeout(200)
+        seq.append((cue[0], pg.evaluate("() => PV.fidx")))
+    mel = pg.evaluate("() => pvNotesOf().slice(0, 4).map(m => m[0])")
+    check('Praticar no Arranjo: a luz segue a melodia', [c for c, _ in seq] == mel and [f for _, f in seq] == [1, 2, 3, 4], (seq, mel))
+    # T153: as duas luzes tocadas juntas (a seguinte chega 150 ms antes da certa): contam as duas, em ordem, sem erro
+    for n in (61, 64):
+        pg.evaluate("n => __fm1.key(n, false)", n)
+    pg.evaluate("() => document.querySelector('[data-act=\"pvpmel\"]').click()"); pg.wait_for_timeout(300)
+    pg.evaluate("() => __fm1.key(64, true)"); pg.wait_for_timeout(150); pg.evaluate("() => __fm1.key(61, true)"); pg.wait_for_timeout(50)
+    q = pg.evaluate("() => ({fidx: PV.fidx, err: PV.err || 0})")
+    check('Praticar: a seguinte tocada junto com a certa conta as duas', q['fidx'] == 2 and q['err'] == 0, q)
+    for n in (61, 64):
+        pg.evaluate("n => __fm1.key(n, false)", n)
+    pg.evaluate("() => document.querySelector('[data-act=\"pvpmel\"]').click()"); pg.wait_for_timeout(300)
+    pg.evaluate("() => __fm1.key(64, true)"); pg.wait_for_timeout(400)
+    q = pg.evaluate("() => ({fidx: PV.fidx, err: PV.err || 0})")
+    check('Praticar: só a seguinte, sem a certa, continua errada', q['fidx'] == 0 and q['err'] == 1, q)
     check('sem erros de JavaScript', not erros, erros)
     b.close()
 

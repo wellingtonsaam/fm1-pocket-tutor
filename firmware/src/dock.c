@@ -1403,8 +1403,8 @@ static void tu_keys(uint32_t y)                 /* the 27 keys, 16 white of 13 p
             int32_t x = 8 + (int32_t)w * 14 - 5;
             uint16_t c = tu_kc(k, lit, root, nxt, TU_BLK);
             cv_rect(x, 0, 9, 38, c != TU_BLK ? C_BLACK : c);   /* T143 (Figma 297:251): a lit black key keeps a 1 px */
-            if (c != TU_BLK)                    /* edge in the screen's background colour left, right and below, none */
-                cv_rect(x + 1, 0, 7, 37, c);    /* on top: apart from the lit white keys next to it                  */
+            if (c != TU_BLK)                    /* edge in the screen's background colour all round (T170: on top    */
+                cv_rect(x + 1, 1, 7, 36, c);    /* too): apart from the lit white keys next to it                     */
         } else
             w++;
     cv_blit(0, y);

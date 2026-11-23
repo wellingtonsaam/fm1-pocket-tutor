@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// © 2026 Wellington Saam. Todos os direitos reservados (FM1 Pocket Tutor, app web; ver LICENSING.md).
 // FM1 Pocket Tutor · leitor e escritor de MIDI padrão (SMF, formatos 0 e 1) para os spikes F2 e F3.
 'use strict';
 const SMF = (() => {

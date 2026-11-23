@@ -1,0 +1,6 @@
+{
+  "name": "fm1-pocket-tutor-web",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@vercel/blob": "2.9.0" }
+}

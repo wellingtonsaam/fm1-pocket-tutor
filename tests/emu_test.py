@@ -539,13 +539,13 @@ def tutor_cases():
     b = [tutor_px("tutor_basic", *p) for p in (A3, FS3, D4)]
     check("tutor_basic", near(b[0], YEL) and near(b[1], YEL) and near(b[2], KEY),
           f"basic: A3 and the root F#3 yellow, the next (D4) left white: {b}")
-    # T143 (Figma 297:251): the lit black key (C#4) with a 1 px dark edge left, right and below, none on top;
+    # T143 (Figma 297:251): the lit black key (C#4) with a 1 px dark edge left, right and below; T170: on top too;
     # an unlit black key (D#4) as before
     BLK0 = (0, 0, 0)
     cs = [tutor_px("tutor_basic", *p) for p in ((77, 120), (73, 120), (81, 120), (77, 137), (77, 100), (91, 120))]
     check("tutor_black_edge", near(cs[0], YEL) and near(cs[1], BLK0) and near(cs[2], BLK0) and near(cs[3], BLK0)
-          and near(cs[4], YEL) and not near(cs[5], YEL),
-          f"a lit black key (C#4): yellow inside, dark edge left/right/below, yellow at the top; D#4 unlit: {cs}")
+          and near(cs[4], BLK0) and near(tutor_px("tutor_basic", 77, 101), YEL) and not near(cs[5], YEL),
+          f"a lit black key (C#4): yellow inside, a dark edge all round (T170: the top too); D#4 unlit: {cs}")
     run("tutor_adv", keys(1500, tutor_frame(1, 0, 0, texts)), 2300)
     a = [tutor_px("tutor_adv", *p) for p in (A3, FS3, D4)]
     check("tutor_adv", near(a[0], YEL) and near(a[1], LIL) and near(a[2], DRK),

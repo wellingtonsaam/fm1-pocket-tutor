@@ -503,6 +503,15 @@ static uint32_t cur, page, want_stage, save_at;
 static struct { uint32_t magic; uint16_t patch; uint8_t page, mode, engine, bend, pad[2]; } rec;
 #define REC_MAGIC 0x31364D46u
 static uint8_t bank_cc;
+/* T173 (FM1 Pocket Tutor): the voice line as the app names it, in the app's language ("KEYS #7", "TECLAS #7"):
+ * the app sends one line per own voice (0 INIT .. NOWN-1) in a MODULE frame 'L' line NUL line NUL ..; kept in RAM
+ * until the module stops (the app sends them again on connect). Without them: "FM6 7 OF 24" as before */
+#define LAB_N 21u
+static char lab[25][LAB_N];
+static uint8_t lab_on;
+/* T179: the order of the app's voice picker (its groups), a MODULE frame 'O' + the voice numbers: PRESETS walks the
+ * own voices in it (TINE EP, TINE EP 2, CLAVINET ..), then USER / BANK as before; without it, by number */
+static uint8_t ord[25], ord_n;
 
 static void stage_patch(void)
 {
@@ -694,7 +703,24 @@ static void ui(uint32_t ev, int32_t arg)
         return;
     if (id == HB_ENC_PRESETS) {
         int32_t k = (int32_t)cur + arg, n = (int32_t)npatches();
+        uint32_t was = cur, j, pos, tot;
+        if (ord_n) {                            /* T179 + T184: a loop in the app's order, then USER / BANK, then */
+            tot = ord_n + (uint32_t)(n - (int32_t)NOWN);   /* the first again (and back: the first, then the last)  */
+            if (cur < NOWN) {
+                for (j = 0; j < ord_n && ord[j] != cur; j++)
+                    ;
+                pos = j < ord_n ? j : 0u;
+            } else
+                pos = ord_n + (cur - NOWN);
+            pos = (uint32_t)((((int32_t)pos + arg) % (int32_t)tot + (int32_t)tot) % (int32_t)tot);
+            k = pos < ord_n ? (int32_t)ord[pos] : (int32_t)(NOWN + (pos - ord_n));
+        } else if (n > 0)
+            k = (k % n + n) % n;                /* T184: without the app, by number, a loop too */
         patch_select((uint32_t)(k < 0 ? 0 : k >= n ? n - 1 : k));
+        if (cur != was) {                       /* T173: the knob's voice to the computer too (the app follows it) */
+            H->midi_send(0xB0u, 0u, cur >> 7);  /* (bank select: 0 for the own voices) */
+            H->midi_send(0xC0u, cur & 0x7Fu, 0u);
+        }
     } else if (id == HB_ENC_ALGORITHM) {
         edit(FP_ALG, ui_v[FP_ALG] + arg);
     } else if (id == HB_ENC_SELECT) {
@@ -824,8 +850,8 @@ static void draw(uint32_t full)
         d_cur = cur;
         memcpy(d_name, name, sizeof d_name);
         s[0] = 0;                               /* "FM6 3 OF 24" (Melodee's), "BANK 12 OF 32" (sent) */
-        cat(s, !cur ? "FM6  INIT" : cur < NOWN ? "FM6 " : is_user(cur) ? "USER " : "BANK ");
-        if (cur) {
+        cat(s, lab_on && cur < NOWN && cur < 25u && lab[cur][0] ? lab[cur] : !cur ? "FM6  INIT" : cur < NOWN ? "FM6 " : is_user(cur) ? "USER " : "BANK ");
+        if (cur && !(lab_on && cur < NOWN && cur < 25u && lab[cur][0])) {
             num(t, (int32_t)(cur < NOWN ? cur : is_user(cur) ? cur - NOWN - imp.count + 1u : cur - NOWN + 1u), 0);
             cat(s, t);
             cat(s, " OF ");
@@ -946,6 +972,23 @@ static int data(const uint8_t *p, uint32_t n)
         uint32_t at = n >= 5u ? rd32(p + 1) : ~0u;
         if (at > fsize || n - 5u > fsize - at) return 4;
         memcpy(fbuf + at, p + 5, n - 5u);
+        return 0;
+    }
+    if (p[0] == 'O') {                          /* T179: the app's order */
+        ord_n = 0;
+        for (i = 1; i < n && ord_n < 25u; i++)
+            if (p[i] < NOWN) ord[ord_n++] = p[i];
+        return 0;
+    }
+    if (p[0] == 'L') {                          /* T173: the app's lines */
+        uint32_t v = 0, c = 0;
+        memset(lab, 0, sizeof lab);
+        for (i = 1; i < n && v < 25u && v < NOWN; i++) {
+            if (!p[i]) { v++; c = 0; continue; }
+            if (c < LAB_N - 1u) lab[v][c++] = (char)(p[i] >= 32u && p[i] <= 126u ? p[i] : '?');
+        }
+        lab_on = 1;
+        d_cur = ~0u;                            /* (drawn again) */
         return 0;
     }
     if (p[0] != HB_FILE_END)
